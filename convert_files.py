@@ -6,10 +6,10 @@
 A module to convert JPL COSMIC data files from ASCII to netCDF4.
 
 File:           convert_files.py
-File version:   1.0.0
+File version:   1.1.0
 Python version: 3.7.3
 Date created:   2021-01-28
-Last updated:   2021-01-28
+Last updated:   2021-01-29
 
 Author:  Erick Edward Shepherd
 E-mail:  dev@erickshepherd.com
@@ -58,6 +58,7 @@ import gzip
 import multiprocessing
 import os
 import re
+from functools import partial
 from typing import Callable
 from typing import Iterable
 
@@ -68,7 +69,7 @@ from tqdm import tqdm
 
 # %% Dunder definitions.
 __author__  = "Erick Edward Shepherd"
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 # %% Constant definitions.
 PROCESSES      = 16
@@ -95,7 +96,15 @@ def read_cosmic_ascii_file(filename : str) -> (dict, dict):
     header     = {}
     body_index = None
     
-    with gzip.open(filename, "rt") as file:
+    if filename.endswith(".gz"):
+        
+        open_file = partial(gzip.open, mode = "rt")
+        
+    else:
+        
+        open_file = partial(open, mode = "r")
+    
+    with open_file(filename) as file:
         
         for index, line in enumerate(file):
             
@@ -103,17 +112,20 @@ def read_cosmic_ascii_file(filename : str) -> (dict, dict):
             
             if match:
                 
+                field = match["field"]
+                value = match["value"]
+                
                 try:
                 
-                    header[match["field"]] = eval(match["value"])
+                    header[field] = eval(value)
                     
                 except (NameError, SyntaxError):
                     
-                    header[match["field"]] = eval(f"'{match['value']}'")
+                    header[field] = eval(f"'{value}'")
                     
-                if isinstance(header[match["field"]], set):
+                if isinstance(header[field], set):
                         
-                    header[match["field"]] = tuple(header[match["field"]])
+                    header[field] = tuple(header[field])
                     
                 body_index = index + 1
     
@@ -172,8 +184,15 @@ def write_cosmic_netcdf4_file(filename : str, header : dict, data : dict):
     
     '''
     
-    base_filename = os.path.splitext(os.path.splitext(filename)[0])[0]
+    base_filename = os.path.splitext(filename)[0]
+    
+    # Split the extension a second time if the file was compressed.
+    if filename.endswith(".gz"):
+        
+        base_filename = os.path.splitext(base_filename)[0]
+    
     save_filename = base_filename + ".nc"
+    save_filename = re.sub(r"(?:\\|/)txt(?:\\|/)?", "/nc/", save_filename)
     
     with nc.Dataset(save_filename, "w") as dataset:
         
@@ -281,11 +300,27 @@ def crawl_convert(paths : Iterable):
 
         if not os.path.isfile(path):
 
-            for root, dirs, files in os.walk(path):
+            for root, directories, files in os.walk(path):
+                
+                for directory in directories:
+                    
+                    dir_path = os.path.join(root, directory)
+                    
+                    if re.search(r"(?:\\|/)txt(?:\\|/)?", dir_path):
+                        
+                        nc_dir_path = re.sub(
+                            r"(?:\\|/)txt(?:\\|/)?",
+                            "/nc",
+                            dir_path
+                        )
+                    
+                        if not os.path.exists(nc_dir_path):
+                        
+                            os.mkdir(nc_dir_path)
 
                 for file in files:
 
-                    if file.endswith(".txt.gz"):
+                    if file.endswith(".txt") or file.endswith(".txt.gz"):
 
                         data_paths.append(os.path.join(root, file))
 
