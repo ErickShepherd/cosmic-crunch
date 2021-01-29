@@ -6,7 +6,7 @@
 A module to convert JPL COSMIC data files from ASCII to netCDF4.
 
 File:           convert_files.py
-File version:   1.1.0
+File version:   1.1.1
 Python version: 3.7.3
 Date created:   2021-01-28
 Last updated:   2021-01-29
@@ -55,6 +55,7 @@ To-do:
 # %% Standard library imports.
 import argparse
 import gzip
+import logging
 import multiprocessing
 import os
 import re
@@ -69,11 +70,17 @@ from tqdm import tqdm
 
 # %% Dunder definitions.
 __author__  = "Erick Edward Shepherd"
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 
 # %% Constant definitions.
 PROCESSES      = 16
 HEADER_REGEX   = re.compile(r"(?P<field>\S+)\s+=\s+(?P<value>.+)")
+
+logging.basicConfig(
+    filename = f"{os.path.basename(__file__)}.log",
+    level    = logging.INFO,
+    format   = "%(asctime)-19s || %(levelname)-8s || %(name)s :: %(message)s"
+)
 
 
 # %% Function definition: read_cosmic_ascii_file
@@ -92,6 +99,8 @@ def read_cosmic_ascii_file(filename : str) -> (dict, dict):
     :rtype: (dict, dict)
     
     '''
+    
+    logger = logging.getLogger("read_cosmic_ascii_file")
     
     header     = {}
     body_index = None
@@ -149,18 +158,26 @@ def read_cosmic_ascii_file(filename : str) -> (dict, dict):
         skiprows  = body_index
     )
     
-    data = {}
+    if raw_data.empty:
+        
+        logger.warn(f"{filename} contains no data!")
+        
+        data = None
     
-    for name in data_types.keys():
-        
-        dtype_id     = data_types[name]["id"]
-        dtype_fields = data_types[name]["fields"]
-        
-        data[name] = raw_data[raw_data["Field"] == dtype_id]
-        data[name] = data[name].drop(["Field"], axis = 1)
-        data[name] = data[name].reset_index(drop = True)
-        data[name].columns = dtype_fields
-        data[name].index.name = "Index"
+    else:
+    
+        data = {}
+
+        for name in data_types.keys():
+
+            dtype_id     = data_types[name]["id"]
+            dtype_fields = data_types[name]["fields"]
+
+            data[name] = raw_data[raw_data["Field"] == dtype_id]
+            data[name] = data[name].drop(["Field"], axis = 1)
+            data[name] = data[name].reset_index(drop = True)
+            data[name].columns = dtype_fields
+            data[name].index.name = "Index"
     
     return header, data
 
@@ -199,21 +216,23 @@ def write_cosmic_netcdf4_file(filename : str, header : dict, data : dict):
         for key, value in header.items():
         
             dataset.setncattr(key, value)
-    
-        for group_name, df in data.items():
+        
+        if data is not None:
+        
+            for group_name, df in data.items():
 
-            group = dataset.createGroup(group_name)
-            group.createDimension(df.index.name, df.index.size)
+                group = dataset.createGroup(group_name)
+                group.createDimension(df.index.name, df.index.size)
 
-            for column in df.columns:
+                for column in df.columns:
 
-                variable = group.createVariable(
-                    column,
-                    df[column].dtype.str,
-                    (df.index.name,)
-                )
+                    variable = group.createVariable(
+                        column,
+                        df[column].dtype.str,
+                        (df.index.name,)
+                    )
 
-                variable[:] = df[column].values
+                    variable[:] = df[column].values
     
 
 # %% Function definition: convert_cosmic_file
@@ -229,9 +248,17 @@ def convert_cosmic_file(filename : str):
     
     '''
     
-    header, data = read_cosmic_ascii_file(filename)
+    logger = logging.getLogger("convert_cosmic_file")
     
-    write_cosmic_netcdf4_file(filename, header, data)
+    try:
+
+        header, data = read_cosmic_ascii_file(filename)
+
+        write_cosmic_netcdf4_file(filename, header, data)
+        
+    except Exception as error:
+        
+        logger.exception(error)
 
 
 # %% Function definition: parallelize
