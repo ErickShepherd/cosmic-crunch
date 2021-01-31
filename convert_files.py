@@ -6,10 +6,10 @@
 A module to convert JPL COSMIC data files from ASCII to netCDF4.
 
 File:           convert_files.py
-File version:   1.1.1
+File version:   1.1.2
 Python version: 3.7.3
 Date created:   2021-01-28
-Last updated:   2021-01-29
+Last updated:   2021-01-31
 
 Author:  Erick Edward Shepherd
 E-mail:  dev@erickshepherd.com
@@ -70,7 +70,7 @@ from tqdm import tqdm
 
 # %% Dunder definitions.
 __author__  = "Erick Edward Shepherd"
-__version__ = "1.1.1"
+__version__ = "1.1.2"
 
 # %% Constant definitions.
 PROCESSES      = 16
@@ -160,7 +160,7 @@ def read_cosmic_ascii_file(filename : str) -> (dict, dict):
     
     if raw_data.empty:
         
-        logger.warn(f"{filename} contains no data!")
+        logger.warning(f"{filename} contains no data!")
         
         data = None
     
@@ -257,6 +257,11 @@ def convert_cosmic_file(filename : str):
         write_cosmic_netcdf4_file(filename, header, data)
         
     except Exception as error:
+        
+        logger.error(
+            f"An error occurred while attempting to convert the file "
+            f"{filename}"
+        )
         
         logger.exception(error)
 
