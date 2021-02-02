@@ -9,7 +9,7 @@ File:           convert_files.py
 File version:   1.1.2
 Python version: 3.7.3
 Date created:   2021-01-28
-Last updated:   2021-01-31
+Last updated:   2021-02-01
 
 Author:  Erick Edward Shepherd
 E-mail:  dev@erickshepherd.com
@@ -49,6 +49,11 @@ To-do:
     # TODO: Switch from using `.endswith(".txt.gz")` to the use of a regular
             expression to better discriminate between data files during
             recursive file crawling.
+            
+    # TODO: Catch cases where a file is missing a header, missing data, or both
+            (empty).
+            
+    # TODO: Update the logging to use a rotating file handler.
 
 '''
 
@@ -69,6 +74,7 @@ import pandas as pd
 from tqdm import tqdm
 
 # %% Dunder definitions.
+# - Versioning scheme: SemVer 2.0.0 (https://semver.org/spec/v2.0.0.html)
 __author__  = "Erick Edward Shepherd"
 __version__ = "1.1.2"
 
