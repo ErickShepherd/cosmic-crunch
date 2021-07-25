@@ -6,10 +6,10 @@
 A module to download JPL COSMIC data files.
 
 File:           get_files.py
-File version:   1.0.0
+File version:   1.0.1
 Python version: 3.7.3
 Date created:   2020-12-11
-Last updated:   2020-12-11
+Last updated:   2021-07-25
 
 Author:  Erick Edward Shepherd
 E-mail:  dev@erickshepherd.com
@@ -55,38 +55,41 @@ import multiprocessing
 import os
 import requests
 import re
+from typing import Callable
+from typing import Dict
+from typing import List
 
 # %% Third party imports.
 from tqdm import tqdm
 
 # %% Dunder definitions.
 __author__  = "Erick Edward Shepherd"
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 # %% Constant definitions.
-URL_REGEX          = r"<a href=\"(?P<url>.*?)\""
-YEAR_URL_REGEX     = r"<a href=\"(?P<url>y\d{4}/)\""
-DATE_URL_REGEX     = r"<a href=\"(?P<url>\d{4}-\d{2}-\d{2}/)\""
-DATA_URL_REGEX     = r"<a href=\"(?P<url>\S*?\.(?:txt\.gz|nc))\""
-FORMAT_URL_REGEX   = r"<a href=\"(?P<url>\w+/)\""
-FILENAME_REGEX     = (r".*(?:\\|/)+cosmic\d(?:\\|/)+postproc(?:\\|/)+"
-                      r"y(?P<year>\d{4})(?:\\|/)+(?P<dtg>\d{4}-\d{2}-\d{2})"
-                      r"(?:\\|/)+(?:L2)*(?:\\|/)+(?P<filetype>txt|nc)(?:\\|/)+"
-                      r"(?P<filename>.*)")
-URL_REGEX          = re.compile(URL_REGEX,        re.MULTILINE)
-YEAR_URL_REGEX     = re.compile(YEAR_URL_REGEX,   re.MULTILINE)
-DATE_URL_REGEX     = re.compile(DATE_URL_REGEX,   re.MULTILINE)
-FORMAT_URL_REGEX   = re.compile(FORMAT_URL_REGEX, re.MULTILINE)
-DATA_URL_REGEX     = re.compile(DATA_URL_REGEX,   re.MULTILINE)
-FILENAME_REGEX     = re.compile(FILENAME_REGEX,   re.DOTALL)
-INSTRUMENT         = "cosmic"
-DATA_DIRECTORY     = "postproc"
-DATA_LEVEL         = "L2"
-BASE_URL           = "https://genesis.jpl.nasa.gov/ftp/pub/genesis/glevels"
-SAVE_DIRECTORY     = os.path.abspath("./jpl_cosmic")
-CHUNK_SIZE         = 2 ** 13
-PROCESSES          = 16
-TEST_RUN           = True
+URL_REGEX        = r"<a href=\"(?P<url>.*?)\""
+YEAR_URL_REGEX   = r"<a href=\"(?P<url>y\d{4}/)\""
+DATE_URL_REGEX   = r"<a href=\"(?P<url>\d{4}-\d{2}-\d{2}/)\""
+DATA_URL_REGEX   = r"<a href=\"(?P<url>\S*?\.(?:txt\.gz|nc))\""
+FORMAT_URL_REGEX = r"<a href=\"(?P<url>\w+/)\""
+FILENAME_REGEX   = (r".*(?:\\|/)+cosmic\d(?:\\|/)+postproc(?:\\|/)+"
+                    r"y(?P<year>\d{4})(?:\\|/)+(?P<dtg>\d{4}-\d{2}-\d{2})"
+                    r"(?:\\|/)+(?:L2)*(?:\\|/)+(?P<filetype>txt|nc)(?:\\|/)+"
+                    r"(?P<filename>.*)")
+URL_REGEX        = re.compile(URL_REGEX,        re.MULTILINE)
+YEAR_URL_REGEX   = re.compile(YEAR_URL_REGEX,   re.MULTILINE)
+DATE_URL_REGEX   = re.compile(DATE_URL_REGEX,   re.MULTILINE)
+FORMAT_URL_REGEX = re.compile(FORMAT_URL_REGEX, re.MULTILINE)
+DATA_URL_REGEX   = re.compile(DATA_URL_REGEX,   re.MULTILINE)
+FILENAME_REGEX   = re.compile(FILENAME_REGEX,   re.DOTALL)
+INSTRUMENT       = "cosmic"
+DATA_DIRECTORY   = "postproc"
+DATA_LEVEL       = "L2"
+BASE_URL         = "https://genesis.jpl.nasa.gov/ftp/pub/genesis/glevels"
+SAVE_DIRECTORY   = os.path.abspath("./jpl_cosmic")
+CHUNK_SIZE       = 2 ** 13
+PROCESSES        = 16
+TEST_RUN         = False
 
 if TEST_RUN:
     
@@ -97,12 +100,26 @@ if TEST_RUN:
     INSTRUMENT     = "cosmic1"
 
 
-def flatten(list_of_lists):
+# %% Function definition: flatten
+def flatten(list_of_lists : List[List]) -> List:
+    
+    '''
+    
+    # TODO
+    
+    '''
     
     return [element for sublist in list_of_lists for element in sublist]
     
 
-def parallelize(function, domain, desc = None):
+# %% Function definition: parallelize
+def parallelize(function : Callable, domain : str, desc : str = None) -> List:
+    
+    '''
+    
+    # TODO
+    
+    '''
     
     with multiprocessing.Pool(PROCESSES) as pool:
         
@@ -115,7 +132,14 @@ def parallelize(function, domain, desc = None):
         return list(tqdm(p.imap(f, D), total = len(D), desc = d))
 
 
-def retry_decorator(func):
+# %% Function definition: retry_decorator
+def retry_decorator(func : Callable) -> Callable:
+    
+    '''
+    
+    # TODO
+    
+    '''
     
     def wrapper(*args, **kwargs):
         
@@ -140,7 +164,14 @@ def retry_decorator(func):
     return wrapper
                 
 
-def _crawl_cosmic_urls():
+# %% Function definition: _crawl_cosmic_urls
+def _crawl_cosmic_urls() -> List[str]:
+    
+    '''
+    
+    # TODO
+    
+    '''
 
     with requests.get(BASE_URL) as request:
 
@@ -155,13 +186,28 @@ def _crawl_cosmic_urls():
     return cosmic_urls
 
 
-# Pickleable with decorator.
-def crawl_cosmic_urls(*args, **kwargs):
+# %% Function definition: crawl_cosmic_urls
+def crawl_cosmic_urls(*args : List, **kwargs : Dict) -> Callable:
+    
+    '''
+    
+    Pickleable with decorator.
+    
+    # TODO
+    
+    '''
     
     return retry_decorator(_crawl_cosmic_urls)(*args, **kwargs)
 
 
-def _crawl_year_urls(cosmic_url):
+# %% Function definition: _crawl_year_urls
+def _crawl_year_urls(cosmic_url : str) -> List[str]:
+    
+    '''
+        
+    # TODO
+    
+    '''
              
     with requests.get(cosmic_url) as request:
 
@@ -174,14 +220,29 @@ def _crawl_year_urls(cosmic_url):
     return year_urls
 
 
-# Pickleable with decorator.
-def crawl_year_urls(*args, **kwargs):
+# %% Function definition: crawl_year_urls
+def crawl_year_urls(*args : List, **kwargs : Dict):
+    
+    '''
+    
+    Pickleable with decorator.
+    
+    # TODO
+    
+    '''
     
     return retry_decorator(_crawl_year_urls)(*args, **kwargs)
 
 
-def _crawl_date_urls(year_url):
-
+# %% Function definition: _crawl_date_urls
+def _crawl_date_urls(year_url : str) -> List[str]:
+    
+    '''
+        
+    # TODO
+    
+    '''
+    
     with requests.get(year_url) as request:
 
         request.raise_for_status()
@@ -193,14 +254,29 @@ def _crawl_date_urls(year_url):
     return date_urls
 
 
-# Pickleable with decorator.
-def crawl_date_urls(*args, **kwargs):
+# %% Function definition: crawl_date_urls
+def crawl_date_urls(*args : List, **kwargs : Dict) -> Callable:
+    
+    '''
+    
+    Pickleable with decorator.
+    
+    # TODO
+    
+    '''
     
     return retry_decorator(_crawl_date_urls)(*args, **kwargs)
           
 
-def _crawl_format_urls(date_url):
-
+# %% Function definition: _crawl_format_urls
+def _crawl_format_urls(date_url : str) -> List[str]:
+    
+    '''
+        
+    # TODO
+    
+    '''
+    
     with requests.get(date_url) as request:
 
         request.raise_for_status()
@@ -223,13 +299,28 @@ def _crawl_format_urls(date_url):
     return format_urls
 
 
-# Pickleable with decorator.
-def crawl_format_urls(*args, **kwargs):
+# %% Function definition: crawl_format_urls
+def crawl_format_urls(*args : List, **kwargs : Dict) -> Callable:
+    
+    '''
+    
+    Pickleable with decorator.
+    
+    # TODO
+    
+    '''
     
     return retry_decorator(_crawl_format_urls)(*args, **kwargs)
     
 
-def _crawl_data_urls(format_url):
+# %% Function definition: _crawl_data_urls
+def _crawl_data_urls(format_url : str) -> List[str]:
+    
+    '''
+        
+    # TODO
+    
+    '''
         
     with requests.get(format_url) as request:
 
@@ -242,14 +333,29 @@ def _crawl_data_urls(format_url):
     return data_urls
 
 
-# Pickleable with decorator.
-def crawl_data_urls(*args, **kwargs):
+# %% Function definition: crawl_data_urls
+def crawl_data_urls(*args : List, **kwargs : Dict) -> Callable:
+    
+    '''
+    
+    Pickleable with decorator.
+    
+    # TODO
+    
+    '''
     
     return retry_decorator(_crawl_data_urls)(*args, **kwargs)
 
-    
-def _download_data_file(source_url):
 
+# %% Function definition: _download_data_file
+def _download_data_file(source_url : str) -> None:
+    
+    '''
+        
+    # TODO
+    
+    '''
+    
     metadata = FILENAME_REGEX.match(source_url)
 
     year     = metadata["year"]
@@ -278,13 +384,22 @@ def _download_data_file(source_url):
                 file.write(chunk)
 
 
-# Pickleable with decorator.
-def download_data_file(*args, **kwargs):
+# %% Function definition: download_data_file
+def download_data_file(*args : List, **kwargs : Dict) -> Callable:
+    
+    '''
+    
+    Pickleable with decorator.
+    
+    # TODO
+    
+    '''
     
     return retry_decorator(_download_data_file)(*args, **kwargs)
     
-    
-def crawl_site():
+
+# %% Function definition: crawl_site
+def crawl_site() -> List[str]:
     
     cosmic_urls = crawl_cosmic_urls()
     
@@ -306,7 +421,8 @@ def crawl_site():
     
     return data_urls
     
-            
+
+# %% Main entry point.
 if __name__ == "__main__":
     
     data_urls = crawl_site()
