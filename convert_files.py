@@ -6,10 +6,10 @@
 A module to convert JPL COSMIC data files from ASCII to netCDF4.
 
 File:           convert_files.py
-File version:   1.1.2
+File version:   1.1.3
 Python version: 3.7.3
 Date created:   2021-01-28
-Last updated:   2021-02-01
+Last updated:   2021-07-25
 
 Author:  Erick Edward Shepherd
 E-mail:  dev@erickshepherd.com
@@ -47,11 +47,11 @@ License:
 To-do:
 
     # TODO: Switch from using `.endswith(".txt.gz")` to the use of a regular
-            expression to better discriminate between data files during
-            recursive file crawling.
+    #       expression to better discriminate between data files during
+    #       recursive file crawling.
             
     # TODO: Catch cases where a file is missing a header, missing data, or both
-            (empty).
+    #       (empty).
             
     # TODO: Update the logging to use a rotating file handler.
 
@@ -76,7 +76,7 @@ from tqdm import tqdm
 # %% Dunder definitions.
 # - Versioning scheme: SemVer 2.0.0 (https://semver.org/spec/v2.0.0.html)
 __author__  = "Erick Edward Shepherd"
-__version__ = "1.1.2"
+__version__ = "1.1.3"
 
 # %% Constant definitions.
 PROCESSES      = 16
@@ -130,6 +130,8 @@ def read_cosmic_ascii_file(filename : str) -> (dict, dict):
                 field = match["field"]
                 value = match["value"]
                 
+                # Attempt to evaluate the "value" string. If the evaluation
+                # fails, treat "value" as a string.
                 try:
                 
                     header[field] = eval(value)
@@ -137,10 +139,19 @@ def read_cosmic_ascii_file(filename : str) -> (dict, dict):
                 except (NameError, SyntaxError):
                     
                     header[field] = eval(f"'{value}'")
-                    
+                
+                # If "value" evaluates as a set, order of the elements risks
+                # being lost. To preserve element order, this modifies the
+                # string so that it evaluates instead as a tuple.
+                #
+                # NOTE: This will not preserve the order of any nested sets
+                #       caught in the evaluation, but such generality is not
+                #       believed to be necessary at this time.
                 if isinstance(header[field], set):
-                        
-                    header[field] = tuple(header[field])
+                    
+                    value = f"({value.strip()[1:-1]})"
+                    
+                    header[field] = eval(value)
                     
                 body_index = index + 1
     
