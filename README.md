@@ -56,7 +56,7 @@ Converting ASCII to netCDF4: 100%|███████████████�
 
 A module to convert JPL COSMIC data files from a gzip-compressed ASCII storage format to the netCDF4 standard.
 
-This module is used automatically by `get_files.py` with the `--netcdf4` flag.
+This module is used automatically by `get_files.py` when it is run with the `--netcdf4` flag.
 
 This module can be run directly with the Python interpreter. The module requires a positional `path` argument for the path or paths of the COSMIC ASCII gzip-compressed data files. This argument can consist of either one or more paths to the individual file(s) or to directories containing them. If a given path is a directory, any nested directories will be searched recursively for COSMIC ASCII files. Converted files are stored beside their original ASCII file. To use,
 
