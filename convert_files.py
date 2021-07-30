@@ -59,6 +59,8 @@ To-do:
       (empty).
             
     - Update the logging to use a rotating file handler.
+    
+    - Add option to erase ASCII file upon conversion.
 
 '''
 

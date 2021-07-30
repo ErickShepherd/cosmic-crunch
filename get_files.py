@@ -8,7 +8,7 @@ A module to download JPL COSMIC data files.
 Metadata:
 
     File:           get_files.py
-    File version:   1.1.1
+    File version:   1.2.1
     Python version: 3.7.3
     Date created:   2020-12-11
     Last updated:   2021-07-29
@@ -73,9 +73,12 @@ from typing import List
 # %% Third party imports.
 from tqdm import tqdm
 
+# %% Local application imports.
+from convert_files import crawl_convert
+
 # %% Dunder definitions.
 __author__  = "Erick Edward Shepherd"
-__version__ = "1.1.1"
+__version__ = "1.2.1"
 
 # %% Constant definitions.
 URL_REGEX        = r"<a href=\"(?P<url>.*?)\""
@@ -100,6 +103,7 @@ BASE_URL         = "https://genesis.jpl.nasa.gov/ftp/pub/genesis/glevels"
 SAVE_DIRECTORY   = os.path.abspath("./jpl_cosmic")
 CHUNK_SIZE       = 2 ** 13
 PROCESSES        = 1
+FILES_TO_GET     = -1
 
 
 # %% Function definition: flatten
@@ -495,8 +499,9 @@ def crawl_site(processes : int = PROCESSES) -> List[str]:
     return data_urls
     
 
-# %% Main entry point.
-if __name__ == "__main__":
+# %% Main-multiprocessing hybrid entry point.
+# - Allows CLI arguments to be shared between child processes.
+if __name__ in ["__main__", "__mp_main__"]:
     
     parser = argparse.ArgumentParser(
         description = "A script to download COSMIC ASCII data files."
@@ -516,30 +521,40 @@ if __name__ == "__main__":
         "--test",
         dest   = "test_run",
         action = "store_true",
-        help   = "Whether to download a small subset of the data as a test."
+        help   = "Downloads a small subset of the data as a test."
     )
     
-    parser.set_defaults(test_run = False)
+    parser.add_argument(
+        "--netcdf4",
+        dest   = "to_netcdf4",
+        action = "store_true",
+        help   = "Converts the ASCII data files to netCDF4."
+    )
+    
+    parser.set_defaults(test_run   = False)
+    parser.set_defaults(to_netcdf4 = False)
     
     argv   = parser.parse_args()
     kwargv = vars(argv)
-
-# %% Main-multiprocessing hybrid entry point.
-if __name__ in ["__main__", "__mp_main__"]:
     
-    if kwargv["test_run"]:
+    processes = kwargv["processes"]
+    test_run  = kwargv["test_run"]
+    to_nc4    = kwargv["to_netcdf4"]
+    
+    if test_run:
         
         YEAR_URL_REGEX = r"<a href=\"(?P<url>y2019/)\""
         DATE_URL_REGEX = r"<a href=\"(?P<url>2019-01-03/)\""
         YEAR_URL_REGEX = re.compile(YEAR_URL_REGEX, re.MULTILINE)
         DATE_URL_REGEX = re.compile(DATE_URL_REGEX, re.MULTILINE)
         INSTRUMENT     = "cosmic1"
+        FILES_TO_GET   = 10
 
 # %% Main entry point.
+# - Allows forking to start child processes.
 if __name__ == "__main__":
     
-    processes = kwargv["processes"]
-    data_urls = crawl_site(processes)
+    data_urls = crawl_site(processes)[:FILES_TO_GET]
     
     parallelize(
         download_data_file,
@@ -547,3 +562,7 @@ if __name__ == "__main__":
         "Downloading data files",
         processes
     )
+    
+    if to_nc4:
+        
+        crawl_convert([SAVE_DIRECTORY], processes)

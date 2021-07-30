@@ -20,7 +20,7 @@ This module also supports an optional `-h` or `--help` flag which explains its u
 
 ```
 python get_files.py --help
-usage: get_files.py [-h] [--processes PROCESSES] [--test]
+usage: get_files.py [-h] [--processes PROCESSES] [--test] [--netcdf4]
 
 A script to download COSMIC ASCII data files.
 
@@ -29,30 +29,34 @@ optional arguments:
   --processes PROCESSES
                         The number of processes to use in the multiprocessing
                         pool. Defaults to 1.
-  --test                Whether to download a small subset of the data as a
-                        test.
+  --test                Downloads a small subset of the data as a test.
+  --netcdf4             Converts the ASCII data files to netCDF4.
 ```
 
 As explained in the `--help` message, there are also a few other optional flags.
 
 * `--test` downloads a small subset of the available data to test that the script is working. 
 * `--processes` overrides the default number of processes used in the `multiprocessing.Pool`.
+* `--netcdf4` converts the ASCII data files to netCDF4.
 
 As an example, a successful test run resembles the following:
 
 ```
-python get_files.py --test
-Crawling all ./cosmic<#>/postproc: 100%|████████████████████████████████| 1/1 [00:00<00:00,  2.06it/s]
-Crawling all ./cosmic<#>/.../<year>: 100%|██████████████████████████████| 1/1 [00:00<00:00,  1.94it/s]
-Crawling all ./cosmic<#>/.../<date>: 100%|██████████████████████████████| 1/1 [00:01<00:00,  1.05s/it]
-Crawling all ./cosmic<#>/.../L2/<format>: 100%|█████████████████████████| 1/1 [00:00<00:00,  2.02it/s]
-Downloading data files:   9%|████████                                   | 13/151 [00:06<01:05,  2.09it/s]
+python get_files.py --test --netcdf4 --processes=4
+Crawling all ./cosmic<#>/postproc: 100%|████████████████████████████████| 1/1 [00:02<00:00,  2.33s/it]
+Crawling all ./cosmic<#>/.../<year>: 100%|██████████████████████████████| 1/1 [00:02<00:00,  2.30s/it]
+Crawling all ./cosmic<#>/.../<date>: 100%|██████████████████████████████| 1/1 [00:02<00:00,  2.96s/it]
+Crawling all ./cosmic<#>/.../L2/<format>: 100%|█████████████████████████| 1/1 [00:02<00:00,  2.38s/it]
+Downloading data files: 100%|███████████████████████████████████████████| 10/10 [00:03<00:00,  2.62it/s]
+Converting ASCII to netCDF4: 100%|██████████████████████████████████████| 10/10 [00:02<00:00,  3.58it/s]
 ```
 
 
 ## convert_files.py
 
 A module to convert JPL COSMIC data files from a gzip-compressed ASCII storage format to the netCDF4 standard.
+
+This module is used automatically by `get_files.py` with the `--netcdf4` flag.
 
 This module can be run directly with the Python interpreter. The module requires a positional `path` argument for the path or paths of the COSMIC ASCII gzip-compressed data files. This argument can consist of either one or more paths to the individual file(s) or to directories containing them. If a given path is a directory, any nested directories will be searched recursively for COSMIC ASCII files. Converted files are stored beside their original ASCII file. To use,
 
