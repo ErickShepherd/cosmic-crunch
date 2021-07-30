@@ -42,11 +42,11 @@ As an example, a successful test run resembles the following:
 
 ```
 python get_files.py --test
-Crawling all ./cosmic<#>/postproc: 100%|███████████████████████████████████████████████| 1/1 [00:00<00:00,  2.06it/s]
-Crawling all ./cosmic<#>/.../<year>: 100%|█████████████████████████████████████████████| 1/1 [00:00<00:00,  1.94it/s]
-Crawling all ./cosmic<#>/.../<date>: 100%|█████████████████████████████████████████████| 1/1 [00:01<00:00,  1.05s/it]
-Crawling all ./cosmic<#>/.../L2/<format>: 100%|████████████████████████████████████████| 1/1 [00:00<00:00,  2.02it/s]
-Downloading data files:   9%|███████▎                                                  | 13/151 [00:06<01:05,  2.09it/s]
+Crawling all ./cosmic<#>/postproc: 100%|█████████████████████████████████████| 1/1 [00:00<00:00,  2.06it/s]
+Crawling all ./cosmic<#>/.../<year>: 100%|███████████████████████████████████| 1/1 [00:00<00:00,  1.94it/s]
+Crawling all ./cosmic<#>/.../<date>: 100%|███████████████████████████████████| 1/1 [00:01<00:00,  1.05s/it]
+Crawling all ./cosmic<#>/.../L2/<format>: 100%|██████████████████████████████| 1/1 [00:00<00:00,  2.02it/s]
+Downloading data files:   9%|████████                                        | 13/151 [00:06<01:05,  2.09it/s]
 ```
 
 
@@ -94,5 +94,5 @@ As an example, a successful run resembles the following:
 
 ```
 python convert_files.py . --processes=4
-Converting ASCII to netCDF4: 100%|█████████████████████████████████████████████████| 151/151 [00:04<00:00, 36.79it/s]
+Converting ASCII to netCDF4: 100%|███████████████████████████████████████| 151/151 [00:04<00:00, 36.79it/s]
 ```
