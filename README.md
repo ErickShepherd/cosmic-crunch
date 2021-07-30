@@ -16,6 +16,39 @@ To use this module, run it directly with
 python get_files.py
 ```
 
+This module also supports an optional `-h` or `--help` flag which explains its use.
+
+```
+python get_files.py --help
+usage: get_files.py [-h] [--processes PROCESSES] [--test]
+
+A script to download COSMIC ASCII data files.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --processes PROCESSES
+                        The number of processes to use in the multiprocessing
+                        pool. Defaults to 1.
+  --test                Whether to download a small subset of the data as a
+                        test.
+```
+
+As explained in the `--help` message, there are also a few other optional flags.
+
+* `--test` downloads a small subset of the available data to test that the script is working. 
+* `--processes` overrides the default number of processes used in the `multiprocessing.Pool`.
+
+As an example, a successful test run resembles the following:
+
+```
+python get_files.py --test
+Crawling all ./cosmic<#>/postproc: 100%|█████████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00,  2.06it/s]
+Crawling all ./cosmic<#>/.../<year>: 100%|███████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00,  1.94it/s]
+Crawling all ./cosmic<#>/.../<date>: 100%|███████████████████████████████████████████████████████████████████████████| 1/1 [00:01<00:00,  1.05s/it]
+Crawling all ./cosmic<#>/.../L2/<format>: 100%|██████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00,  2.02it/s]
+Downloading data files:   9%|███████▎                                                                             | 13/151 [00:06<01:05,  2.09it/s]
+```
+
 
 ## convert_files.py
 
@@ -31,16 +64,28 @@ This module also supports an optional `-h` or `--help` flag which explains its u
 
 ```
 python convert_files.py --help
-usage: convert_files.py [-h] path [path ...]
+usage: convert_files.py [-h] [--logfile LOGFILE] [--processes PROCESSES]
+                        path [path ...]
 
 A script to create inplace copies of COSMIC ASCII gzip-compressed data files
 in netCDF4 format.
 
 positional arguments:
-  path        The path to one or more COSMIC ASCII gzip-compressed data files
-              or directories containing them. If one or more directories are
-              given, they will be crawled recursively.
+  path                  The path to one or more COSMIC ASCII gzip-compressed
+                        data files or directories containing them. If one or
+                        more directories are given, they will be crawled
+                        recursively.
 
 optional arguments:
-  -h, --help  show this help message and exit
+  -h, --help            show this help message and exit
+  --logfile LOGFILE     A custom name to use for the log file. Overrides the
+                        default "convert_files.py.log".
+  --processes PROCESSES
+                        The number of processes to use in the multiprocessing
+                        pool. Defaults to 1.
 ```
+
+As explained in the `--help` message, there are also a few other optional flags.
+
+* `--logfile` overrides the name of the logfile. 
+* `--processes` overrides the default number of processes used in the `multiprocessing.Pool`.

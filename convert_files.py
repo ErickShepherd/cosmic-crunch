@@ -5,16 +5,21 @@
 
 A module to convert JPL COSMIC data files from ASCII to netCDF4.
 
-File:           convert_files.py
-File version:   1.1.3
-Python version: 3.7.3
-Date created:   2021-01-28
-Last updated:   2021-07-25
+Metadata:
 
-Author:  Erick Edward Shepherd
-E-mail:  dev@erickshepherd.com
-GitHub:  https://www.github.com/ErickShepherd
-Website: https://www.ErickShepherd.com
+    File:           convert_files.py
+    File version:   1.2.3
+    Python version: 3.7.3
+    Date created:   2021-01-28
+    Last updated:   2021-07-25
+
+
+Author(s):
+
+    Erick Edward Shepherd
+     - E-mail:  dev@erickshepherd.com
+     - GitHub:  https://www.github.com/ErickShepherd
+     - Website: https://www.ErickShepherd.com
 
 
 Description:
@@ -46,14 +51,14 @@ License:
     
 To-do:
 
-    # TODO: Switch from using `.endswith(".txt.gz")` to the use of a regular
-    #       expression to better discriminate between data files during
-    #       recursive file crawling.
+    - Switch from using `.endswith(".txt.gz")` to the use of a regular
+      expression to better discriminate between data files during recursive
+      file crawling.
             
-    # TODO: Catch cases where a file is missing a header, missing data, or both
-    #       (empty).
+    - Catch cases where a file is missing a header, missing data, or both
+      (empty).
             
-    # TODO: Update the logging to use a rotating file handler.
+    - Update the logging to use a rotating file handler.
 
 '''
 
@@ -64,6 +69,7 @@ import logging
 import multiprocessing
 import os
 import re
+import sys
 from functools import partial
 from typing import Callable
 from typing import Iterable
@@ -76,17 +82,23 @@ from tqdm import tqdm
 # %% Dunder definitions.
 # - Versioning scheme: SemVer 2.0.0 (https://semver.org/spec/v2.0.0.html)
 __author__  = "Erick Edward Shepherd"
-__version__ = "1.1.3"
+__version__ = "1.2.3"
 
 # %% Constant definitions.
-PROCESSES      = 16
-HEADER_REGEX   = re.compile(r"(?P<field>\S+)\s+=\s+(?P<value>.+)")
+PROCESSES     = 1
+HEADER_REGEX  = re.compile(r"(?P<field>\S+)\s+=\s+(?P<value>.+)")
+LOGGER_FORMAT = "%(asctime)-19s || %(levelname)-8s || %(name)s :: %(message)s"
+LOG_FILENAME  = f"{os.path.basename(__file__)}.log"
 
-logging.basicConfig(
-    filename = f"{os.path.basename(__file__)}.log",
-    level    = logging.INFO,
-    format   = "%(asctime)-19s || %(levelname)-8s || %(name)s :: %(message)s"
-)
+# %% Logging configuration.
+# - This conditional protects an overridden logging configuration.
+if __name__ not in ["__main__", "__mp_main__"]:
+    
+    logging.basicConfig(
+        level    = logging.INFO,
+        format   = LOGGER_FORMAT,
+        handlers = [logging.FileHandler(LOG_FILENAME)],
+    )
 
 
 # %% Function definition: read_cosmic_ascii_file
@@ -287,13 +299,14 @@ def convert_cosmic_file(filename : str):
 def parallelize(
         function  : Callable,
         domain    : Iterable,
-        desc      : str = None,
-        processes : int = PROCESSES) -> list:
+        desc      : str  = None,
+        processes : int  = PROCESSES,
+        verbose   : bool = True,
+        total     : int  = None) -> list:
     
     '''
     
-    Parallelizes some task over a domain of arguments using a
-    `multiprocessing.Pool`.
+    Parallelizes some task over a domain of arguments.
     
     :param function: The function to parallelize.
     :type function: Callable
@@ -307,24 +320,64 @@ def parallelize(
     :param desc: The description of the task being parallelized.
     :type desc: str
     
+    :param verbose: Whether to print the `tqdm` progress bar.
+    :type verbose: bool
+    
+    :param total: The total number of iterations expected.
+    :type total: int
+    
     :return: A list of collected return values from the paralleized function.
     :rtype: list
     
     '''
     
-    with multiprocessing.Pool(processes) as pool:
+    # If not explicitly given, this computes the total from the length of the
+    # domain.
+    if total is None:
         
-        # Variable aliasing for brevity.
-        f = function
-        D = domain
-        d = desc
-        p = pool
+        total = len(domain)
     
-        return list(tqdm(p.imap(f, D), total = len(D), desc = d))
+    if processes > 1:
+    
+        # Instantiates the multiprocessing pool.
+        with multiprocessing.Pool(processes) as pool:
+
+            # Deterines whether or not to wrap the Pool.imap with a tqdm
+            # progress bar.
+            if verbose:
+
+                results = list(tqdm(
+                    pool.imap(function, domain),
+                    total = total,
+                    desc = desc
+                ))
+
+            else:
+
+                results = list(pool.imap(function, domain))
+                
+    else:
+        
+        results = []
+        
+        # Deterines whether or not to wrap the domain with a tqdm progress bar.
+        if verbose:
+        
+            for element in tqdm(domain, total = total, desc = desc):
+
+                results.append(function(element))
+                
+        else:
+            
+            for element in domain:
+
+                results.append(function(element))
+
+    return results
     
 
 # %% Function definition: crawl_convert
-def crawl_convert(paths : Iterable):
+def crawl_convert(paths : Iterable, processes : int = PROCESSES):
     
     '''
     
@@ -380,13 +433,14 @@ def crawl_convert(paths : Iterable):
         parallelize(
             convert_cosmic_file,
             data_paths,
-            "Converting ASCII to netCDF4"
+            "Converting ASCII to netCDF4",
+            processes,
         )
     
 
 # %% Main entry point.
 if __name__ == "__main__":
-    
+        
     parser = argparse.ArgumentParser(
         description = (
             "A script to create inplace copies of COSMIC ASCII "
@@ -405,7 +459,47 @@ if __name__ == "__main__":
         )
     )
     
-    argv   = parser.parse_args()
-    kwargv = vars(argv)
+    parser.add_argument(
+        "--logfile",
+        type    = str,
+        default = None,
+        help    = (
+            "A custom name to use for the log file. Overrides the default "
+            f"\"{LOG_FILENAME}\"."
+        )
+    )
     
-    crawl_convert(kwargv["path"])
+    parser.add_argument(
+        "--processes",
+        type    = int,
+        default = PROCESSES,
+        help    = (
+            "The number of processes to use in the multiprocessing pool. "
+            f"Defaults to {PROCESSES}."
+        )
+    )
+    
+    try:
+    
+        argv   = parser.parse_args()
+        kwargv = vars(argv)
+        
+    except SystemExit:
+        
+        sys.exit()
+    
+    if kwargv["logfile"] is not None:
+                    
+        handlers = [logging.FileHandler(kwargv["logfile"])]
+        
+    else:
+        
+        handlers = [logging.FileHandler(LOG_FILENAME)]
+        
+    logging.basicConfig(
+        level    = logging.INFO,
+        format   = LOGGER_FORMAT,
+        handlers = handlers,
+    )
+    
+    crawl_convert(kwargv["path"], kwargv["processes"])

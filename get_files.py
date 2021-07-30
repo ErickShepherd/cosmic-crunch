@@ -5,16 +5,21 @@
 
 A module to download JPL COSMIC data files.
 
-File:           get_files.py
-File version:   1.0.1
-Python version: 3.7.3
-Date created:   2020-12-11
-Last updated:   2021-07-25
+Metadata:
 
-Author:  Erick Edward Shepherd
-E-mail:  dev@erickshepherd.com
-GitHub:  https://www.github.com/ErickShepherd
-Website: https://www.ErickShepherd.com
+    File:           get_files.py
+    File version:   1.1.1
+    Python version: 3.7.3
+    Date created:   2020-12-11
+    Last updated:   2021-07-29
+
+
+Author(s):
+
+    Erick Edward Shepherd
+     - E-mail:  dev@erickshepherd.com
+     - GitHub:  https://www.github.com/ErickShepherd
+     - Website: https://www.ErickShepherd.com
 
 
 Description:
@@ -45,18 +50,24 @@ License:
 
 To-do:
 
-    # TODO: Document file and generalize it to allow scouring of specific
-            years, months, or days.
+    - Document file and generalize it to allow scouring of specific years,
+      months, or days.
+      
+    - Add argparse support for the number of processes to use.
+    
+    - Add logging.
 
 '''
 
 # %% Standard library imports.
+import argparse
 import multiprocessing
 import os
 import requests
 import re
 from typing import Callable
 from typing import Dict
+from typing import Iterable
 from typing import List
 
 # %% Third party imports.
@@ -64,7 +75,7 @@ from tqdm import tqdm
 
 # %% Dunder definitions.
 __author__  = "Erick Edward Shepherd"
-__version__ = "1.0.1"
+__version__ = "1.1.1"
 
 # %% Constant definitions.
 URL_REGEX        = r"<a href=\"(?P<url>.*?)\""
@@ -88,16 +99,7 @@ DATA_LEVEL       = "L2"
 BASE_URL         = "https://genesis.jpl.nasa.gov/ftp/pub/genesis/glevels"
 SAVE_DIRECTORY   = os.path.abspath("./jpl_cosmic")
 CHUNK_SIZE       = 2 ** 13
-PROCESSES        = 16
-TEST_RUN         = False
-
-if TEST_RUN:
-    
-    YEAR_URL_REGEX = r"<a href=\"(?P<url>y2019/)\""
-    DATE_URL_REGEX = r"<a href=\"(?P<url>2019-01-03/)\""
-    YEAR_URL_REGEX = re.compile(YEAR_URL_REGEX, re.MULTILINE)
-    DATE_URL_REGEX = re.compile(DATE_URL_REGEX, re.MULTILINE)
-    INSTRUMENT     = "cosmic1"
+PROCESSES        = 1
 
 
 # %% Function definition: flatten
@@ -113,23 +115,84 @@ def flatten(list_of_lists : List[List]) -> List:
     
 
 # %% Function definition: parallelize
-def parallelize(function : Callable, domain : str, desc : str = None) -> List:
+def parallelize(
+        function  : Callable,
+        domain    : Iterable,
+        desc      : str  = None,
+        processes : int  = PROCESSES,
+        verbose   : bool = True,
+        total     : int  = None) -> list:
     
     '''
     
-    # TODO
+    Parallelizes some task over a domain of arguments.
+    
+    :param function: The function to parallelize.
+    :type function: Callable
+    
+    :param domain: The domain to use as function arguments.
+    :type domain: Iterable
+    
+    :param processes: The number of pool processes to use for worker creation.
+    :type processes: int
+    
+    :param desc: The description of the task being parallelized.
+    :type desc: str
+    
+    :param verbose: Whether to print the `tqdm` progress bar.
+    :type verbose: bool
+    
+    :param total: The total number of iterations expected.
+    :type total: int
+    
+    :return: A list of collected return values from the paralleized function.
+    :rtype: list
     
     '''
     
-    with multiprocessing.Pool(PROCESSES) as pool:
+    # If not explicitly given, this computes the total from the length of the
+    # domain.
+    if total is None:
         
-        # Variable aliasing for brevity.
-        f = function
-        D = domain
-        d = desc
-        p = pool
+        total = len(domain)
     
-        return list(tqdm(p.imap(f, D), total = len(D), desc = d))
+    if processes > 1:
+    
+        # Instantiates the multiprocessing pool.
+        with multiprocessing.Pool(processes) as pool:
+
+            # Deterines whether or not to wrap the Pool.imap with a tqdm
+            # progress bar.
+            if verbose:
+
+                results = list(tqdm(
+                    pool.imap(function, domain),
+                    total = total,
+                    desc = desc
+                ))
+
+            else:
+
+                results = list(pool.imap(function, domain))
+                
+    else:
+        
+        results = []
+        
+        # Deterines whether or not to wrap the domain with a tqdm progress bar.
+        if verbose:
+        
+            for element in tqdm(domain, total = total, desc = desc):
+
+                results.append(function(element))
+                
+        else:
+            
+            for element in domain:
+
+                results.append(function(element))
+
+    return results
 
 
 # %% Function definition: retry_decorator
@@ -399,25 +462,35 @@ def download_data_file(*args : List, **kwargs : Dict) -> Callable:
     
 
 # %% Function definition: crawl_site
-def crawl_site() -> List[str]:
+def crawl_site(processes : int = PROCESSES) -> List[str]:
+    
+    '''
+    
+    # TODO
+    
+    '''
     
     cosmic_urls = crawl_cosmic_urls()
     
     year_desc = "Crawling all ./cosmic<#>/postproc"
-    year_urls = parallelize(crawl_year_urls, cosmic_urls, year_desc)
-    year_urls = flatten(year_urls)
+    year_urls = flatten(parallelize(
+        crawl_year_urls, cosmic_urls, year_desc, processes
+    ))
     
     date_desc = "Crawling all ./cosmic<#>/.../<year>"
-    date_urls = parallelize(crawl_date_urls, year_urls, date_desc)
-    date_urls = flatten(date_urls)
+    date_urls = flatten(parallelize(
+        crawl_date_urls, year_urls, date_desc, processes
+    ))
     
     format_desc = "Crawling all ./cosmic<#>/.../<date>"
-    format_urls = parallelize(crawl_format_urls, date_urls, format_desc)
-    format_urls = flatten(format_urls)
+    format_urls = flatten(parallelize(
+        crawl_format_urls, date_urls, format_desc, processes
+    ))
     
     data_desc = "Crawling all ./cosmic<#>/.../L2/<format>"
-    data_urls = parallelize(crawl_data_urls, format_urls, data_desc)
-    data_urls = flatten(data_urls)
+    data_urls = flatten(parallelize(
+        crawl_data_urls, format_urls, data_desc, processes
+    ))
     
     return data_urls
     
@@ -425,6 +498,52 @@ def crawl_site() -> List[str]:
 # %% Main entry point.
 if __name__ == "__main__":
     
-    data_urls = crawl_site()
+    parser = argparse.ArgumentParser(
+        description = "A script to download COSMIC ASCII data files."
+    )
     
-    parallelize(download_data_file, data_urls, "Downloading data files")
+    parser.add_argument(
+        "--processes",
+        type    = int,
+        default = PROCESSES,
+        help    = (
+            "The number of processes to use in the multiprocessing pool. "
+            f"Defaults to {PROCESSES}."
+        )
+    )
+    
+    parser.add_argument(
+        "--test",
+        dest   = "test_run",
+        action = "store_true",
+        help   = "Whether to download a small subset of the data as a test."
+    )
+    
+    parser.set_defaults(test_run = False)
+    
+    argv   = parser.parse_args()
+    kwargv = vars(argv)
+
+# %% Main-multiprocessing hybrid entry point.
+if __name__ in ["__main__", "__mp_main__"]:
+    
+    if kwargv["test_run"]:
+        
+        YEAR_URL_REGEX = r"<a href=\"(?P<url>y2019/)\""
+        DATE_URL_REGEX = r"<a href=\"(?P<url>2019-01-03/)\""
+        YEAR_URL_REGEX = re.compile(YEAR_URL_REGEX, re.MULTILINE)
+        DATE_URL_REGEX = re.compile(DATE_URL_REGEX, re.MULTILINE)
+        INSTRUMENT     = "cosmic1"
+
+# %% Main entry point.
+if __name__ == "__main__":
+    
+    processes = kwargv["processes"]
+    data_urls = crawl_site(processes)
+    
+    parallelize(
+        download_data_file,
+        data_urls,
+        "Downloading data files",
+        processes
+    )
