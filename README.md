@@ -93,6 +93,6 @@ As explained in the `--help` message, there are also a few other optional flags.
 As an example, a successful run resembles the following:
 
 ```
-python convert_files.py . --processes=4
+python convert_files.py ./jpl_cosmic/2019/ --logfile=2019.log --processes=4
 Converting ASCII to netCDF4: 100%|██████████████████████████████████| 151/151 [00:04<00:00, 36.79it/s]
 ```
