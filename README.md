@@ -70,7 +70,7 @@ ASCII to netCDF4 conversion summary:
  - Successful conversions: 17
  - Skipped conversions:    3
  - Conversion errors:      0
- - Total conversion count: 20
+ - Total number of files:  20
 ```
 
 
