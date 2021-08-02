@@ -2,11 +2,11 @@
 
 A series of scripts for use with JPL COSMIC data files.
 
-* `get_files.py` is a module to download JPL COSMIC ASCII data files
-* `convert_files.py` is a module to convert COSMIC ASCII data files to netCDF4 format
+* [`get_files.py`](#get_files.py) is a module to download JPL COSMIC ASCII data files
+* [`convert_files.py`](#convert_files.py) is a module to convert COSMIC ASCII data files to netCDF4 format
 
 
-## get_files.py
+## <a name="get_files.py"></a>get_files.py
 
 `get_files.py` is a module to crawl the JPL COSMIC website and download data files.
 
@@ -74,7 +74,7 @@ ASCII to netCDF4 conversion summary:
 ```
 
 
-## convert_files.py
+## <a name="convert_files.py"></a>convert_files.py
 
 A module to convert JPL COSMIC data files from a gzip-compressed ASCII storage format to the netCDF4 standard.
 
