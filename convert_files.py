@@ -163,7 +163,7 @@ def read_cosmic_ascii_file(filename : str) -> (dict, dict):
                 #       believed to be necessary at this time.
                 if isinstance(header[field], set):
                     
-                    value = f"({value.strip()[1:-1]})"
+                    value = f"({value.strip()[1:-1]},)"
                     
                     header[field] = eval(value)
                     

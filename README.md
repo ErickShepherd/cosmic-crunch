@@ -20,12 +20,23 @@ This module also supports an optional `-h` or `--help` flag which explains its u
 
 ```
 python get_files.py --help
-usage: get_files.py [-h] [--processes PROCESSES] [--test] [--netcdf4]
+usage: get_files.py [-h] [--year_regex YEAR_REGEX] [--date_regex DATE_REGEX]
+                    [--processes PROCESSES] [--test] [--netcdf4]
 
 A script to download COSMIC ASCII data files.
 
 optional arguments:
   -h, --help            show this help message and exit
+  --year_regex YEAR_REGEX
+                        An optional year regular expression to download. If
+                        given, all matching data files will be downloaded.
+                        Otherwise, every data file for every year will be
+                        downloaded.
+  --date_regex DATE_REGEX
+                        An optional date regular expression to download. If
+                        given, all matching data files will be downloaded.
+                        Otherwise, every data file for every date will be
+                        downloaded.
   --processes PROCESSES
                         The number of processes to use in the multiprocessing
                         pool. Defaults to 1.
@@ -35,20 +46,22 @@ optional arguments:
 
 As explained in the `--help` message, there are also a few other optional flags.
 
-* `--test` downloads a small subset of the available data to test that the script is working. 
+* `--year_regex` selects a subset of years matching the given regular expression.
+* `--date_regex` selects a subset of dates matching the given regular expression.
 * `--processes` overrides the default number of processes used in the `multiprocessing.Pool`.
+* `--test` downloads a small subset of the available data to test that the script is working. 
 * `--netcdf4` converts the ASCII data files to netCDF4.
 
-As an example, a successful test run resembles the following:
+As an example, a successful run resembles the following:
 
 ```
-python get_files.py --test --netcdf4 --processes=4
-Crawling all ./cosmic<#>/postproc: 100%|████████████████████████████████| 1/1 [00:02<00:00,  2.33s/it]
-Crawling all ./cosmic<#>/.../<year>: 100%|██████████████████████████████| 1/1 [00:02<00:00,  2.30s/it]
-Crawling all ./cosmic<#>/.../<date>: 100%|██████████████████████████████| 1/1 [00:02<00:00,  2.96s/it]
-Crawling all ./cosmic<#>/.../L2/<format>: 100%|█████████████████████████| 1/1 [00:02<00:00,  2.38s/it]
-Downloading data files: 100%|███████████████████████████████████████████| 10/10 [00:03<00:00,  2.62it/s]
-Converting ASCII to netCDF4: 100%|██████████████████████████████████████| 10/10 [00:02<00:00,  3.58it/s]
+python get_files.py --year_regex=2006 --date_regex=2006-05-02 --netcdf4 --processes=4
+Crawling all ./cosmic<#>/postproc: 100%|████████████████████████████████| 6/6 [00:02<00:00,  2.07it/s]
+Crawling all ./cosmic<#>/.../<year>: 100%|██████████████████████████████| 6/6 [00:03<00:00,  1.90it/s]
+Crawling all ./cosmic<#>/.../<date>: 100%|██████████████████████████████| 3/3 [00:02<00:00,  1.04it/s]
+Crawling all ./cosmic<#>/.../L2/<format>: 100%|█████████████████████████| 4/4 [00:02<00:00,  1.66it/s]
+Downloading data files: 100%|███████████████████████████████████████████| 22/22 [00:05<00:00,  4.37it/s]
+Converting ASCII to netCDF4: 100%|██████████████████████████████████████| 20/20 [00:02<00:00,  7.67it/s]
 ```
 
 

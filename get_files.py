@@ -11,7 +11,7 @@ Metadata:
     File version:   1.2.1
     Python version: 3.7.3
     Date created:   2020-12-11
-    Last updated:   2021-07-29
+    Last updated:   2021-08-02
 
 
 Author(s):
@@ -508,6 +508,28 @@ if __name__ in ["__main__", "__mp_main__"]:
     )
     
     parser.add_argument(
+        "--year_regex",
+        type    = str,
+        default = None,
+        help    = (
+            "An optional year regular expression to download. If given, all "
+            "matching data files will be downloaded. Otherwise, every data "
+            "file for every year will be downloaded."
+        )
+    )
+    
+    parser.add_argument(
+        "--date_regex",
+        type    = str,
+        default = None,
+        help    = (
+            "An optional date regular expression to download. If given, all "
+            "matching data files will be downloaded. Otherwise, every data "
+            "file for every date will be downloaded."
+        )
+    )
+    
+    parser.add_argument(
         "--processes",
         type    = int,
         default = PROCESSES,
@@ -537,14 +559,34 @@ if __name__ in ["__main__", "__mp_main__"]:
     argv   = parser.parse_args()
     kwargv = vars(argv)
     
-    processes = kwargv["processes"]
-    test_run  = kwargv["test_run"]
-    to_nc4    = kwargv["to_netcdf4"]
+    year_regex = kwargv["year_regex"]
+    date_regex = kwargv["date_regex"]
+    processes  = kwargv["processes"]
+    test_run   = kwargv["test_run"]
+    to_nc4     = kwargv["to_netcdf4"]
+    
+    if year_regex is not None:
+        
+        YEAR_URL_REGEX = r"<a href=\"(?P<url>y" + year_regex + r"/)\""
+        YEAR_URL_REGEX = re.compile(YEAR_URL_REGEX, re.MULTILINE)
+
+    if date_regex is not None:
+        
+        DATE_URL_REGEX = r"<a href=\"(?P<url>" + date_regex + r"/)\""
+        DATE_URL_REGEX = re.compile(DATE_URL_REGEX, re.MULTILINE)
     
     if test_run:
         
-        YEAR_URL_REGEX = r"<a href=\"(?P<url>y2019/)\""
-        DATE_URL_REGEX = r"<a href=\"(?P<url>2019-01-03/)\""
+        if year_regex is None:
+            
+            year_regex = "2019"
+            
+        if date_regex is None:
+            
+            date_regex = "2019-01-03"
+        
+        YEAR_URL_REGEX = r"<a href=\"(?P<url>y" + year_regex + r"/)\""
+        DATE_URL_REGEX = r"<a href=\"(?P<url>" + date_regex + r"/)\""
         YEAR_URL_REGEX = re.compile(YEAR_URL_REGEX, re.MULTILINE)
         DATE_URL_REGEX = re.compile(DATE_URL_REGEX, re.MULTILINE)
         INSTRUMENT     = "cosmic1"
