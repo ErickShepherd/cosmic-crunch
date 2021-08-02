@@ -8,10 +8,10 @@ A module to convert JPL COSMIC data files from ASCII to netCDF4.
 Metadata:
 
     File:           convert_files.py
-    File version:   1.2.3
+    File version:   1.3.3
     Python version: 3.7.3
     Date created:   2021-01-28
-    Last updated:   2021-07-25
+    Last updated:   2021-08-02
 
 
 Author(s):
@@ -75,6 +75,8 @@ import sys
 from functools import partial
 from typing import Callable
 from typing import Iterable
+from typing import List
+from typing import Tuple
 
 # %% Third party imports.
 import netCDF4 as nc
@@ -84,7 +86,7 @@ from tqdm import tqdm
 # %% Dunder definitions.
 # - Versioning scheme: SemVer 2.0.0 (https://semver.org/spec/v2.0.0.html)
 __author__  = "Erick Edward Shepherd"
-__version__ = "1.2.3"
+__version__ = "1.3.3"
 
 # %% Constant definitions.
 PROCESSES     = 1
@@ -104,7 +106,7 @@ if __name__ not in ["__main__", "__mp_main__"]:
 
 
 # %% Function definition: read_cosmic_ascii_file
-def read_cosmic_ascii_file(filename : str) -> (dict, dict):
+def read_cosmic_ascii_file(filename : str) -> Tuple[dict, dict, bool]:
     
     '''
     
@@ -115,8 +117,8 @@ def read_cosmic_ascii_file(filename : str) -> (dict, dict):
     :param filename: The filename of or path to the data file.
     :type filename: str
     
-    :return: The data file header and data.
-    :rtype: (dict, dict)
+    :return: The data file header, data, and whether the file is empty.
+    :rtype: Tuple[dict, dict, bool]
     
     '''
     
@@ -189,9 +191,11 @@ def read_cosmic_ascii_file(filename : str) -> (dict, dict):
         skiprows  = body_index
     )
     
-    if raw_data.empty:
+    file_is_empty = raw_data.empty
+    
+    if file_is_empty:
         
-        logger.warning(f"{filename} contains no data!")
+        logger.warning(f"The following file contains no data!: {filename}")
         
         data = None
     
@@ -210,7 +214,7 @@ def read_cosmic_ascii_file(filename : str) -> (dict, dict):
             data[name].columns = dtype_fields
             data[name].index.name = "Index"
     
-    return header, data
+    return header, data, file_is_empty
 
 
 # %% Function definition: write_cosmic_netcdf4_file
@@ -267,7 +271,7 @@ def write_cosmic_netcdf4_file(filename : str, header : dict, data : dict):
     
 
 # %% Function definition: convert_cosmic_file
-def convert_cosmic_file(filename : str):
+def convert_cosmic_file(filename : str, skip_empty : bool = False) -> int:
     
     '''
     
@@ -277,24 +281,59 @@ def convert_cosmic_file(filename : str):
     :param filename: The filename of or path to a COSMIC ASCII data file.
     :type filename: str
     
+    :param skip_empty: Whether skip conversion of files whose arrays are empty.
+    :type skip_empty: bool
+    
+    :return: An integer completion code. 0: converted, 1: skipped, 2: error.
+    :rtype: int
+    
     '''
     
     logger = logging.getLogger("convert_cosmic_file")
     
+    completion_codes = {
+        "converted" : 0,
+        "skipped"   : 1,
+        "error"     : 2,
+    }
+    
     try:
 
-        header, data = read_cosmic_ascii_file(filename)
-
-        write_cosmic_netcdf4_file(filename, header, data)
+        header, data, file_is_empty = read_cosmic_ascii_file(filename)
+        
+        if file_is_empty:
+            
+            if skip_empty:
+        
+                logger.warning(
+                    "The empty following empty file was skipped during "
+                    f"the conversion: {filename}"
+                )
+            
+                return completion_codes["skipped"]
+            
+            else:
+                
+                write_cosmic_netcdf4_file(filename, header, data)
+                
+                return completion_codes["converted"]
+                
+        else:
+            
+            write_cosmic_netcdf4_file(filename, header, data)
+            
+            return completion_codes["converted"]
         
     except Exception as error:
         
         logger.error(
-            f"An error occurred while attempting to convert the file "
+            "An error occurred while attempting to convert the file "
             f"{filename}"
         )
         
         logger.exception(error)
+        
+        return completion_codes["error"]
 
 
 # %% Function definition: parallelize
@@ -379,7 +418,9 @@ def parallelize(
     
 
 # %% Function definition: crawl_convert
-def crawl_convert(paths : Iterable, processes : int = PROCESSES):
+def crawl_convert(paths      : Iterable,
+                  processes  : int = PROCESSES,
+                  skip_empty : bool = False) -> List[int]:
     
     '''
     
@@ -391,6 +432,15 @@ def crawl_convert(paths : Iterable, processes : int = PROCESSES):
     
     :param path: The paths to COSMIC ASCII files or directories of them.
     :type path: list
+    
+    :param processes: The number of multiprocessing workers to use.
+    :type processes: int
+    
+    :param skip_empty: Whether skip conversion of files whose arrays are empty.
+    :type skip_empty: bool
+    
+    :return: A list of integer completion codes.
+    :rtype: List[int]
     
     '''
     
@@ -431,17 +481,20 @@ def crawl_convert(paths : Iterable, processes : int = PROCESSES):
         else:
 
             data_paths.append(path)
-
-        parallelize(
-            convert_cosmic_file,
+                
+        completion_codes = parallelize(
+            partial(convert_cosmic_file, skip_empty = skip_empty),
             data_paths,
             "Converting ASCII to netCDF4",
             processes,
         )
+        
+        return completion_codes
     
 
-# %% Main entry point.
-if __name__ == "__main__":
+# %% Main-multiprocessing hybrid entry point.
+# - Allows CLI arguments to be shared between child processes.
+if __name__ in ["__main__", "__mp_main__"]:
         
     parser = argparse.ArgumentParser(
         description = (
@@ -481,6 +534,15 @@ if __name__ == "__main__":
         )
     )
     
+    parser.add_argument(
+        "--skip_empty",
+        dest   = "skip_empty",
+        action = "store_true",
+        help   = "Skips converting files whose arrays are all empty."
+    )
+    
+    parser.set_defaults(skip_empty = False)
+    
     try:
     
         argv   = parser.parse_args()
@@ -504,4 +566,25 @@ if __name__ == "__main__":
         handlers = handlers,
     )
     
-    crawl_convert(kwargv["path"], kwargv["processes"])
+    logger = logging.getLogger("__main__")
+    
+    path       = kwargv["path"]
+    processes  = kwargv["processes"]
+    skip_empty = kwargv["skip_empty"]
+    
+# %% Main entry point.
+# - Allows forking to start child processes.
+if __name__ == "__main__":
+    
+    completion_codes = crawl_convert(path, processes, skip_empty)
+    
+    total_conversions      = len(completion_codes)
+    conversions_successful = completion_codes.count(0)
+    conversions_skipped    = completion_codes.count(1)
+    conversion_errors      = completion_codes.count(2)
+    
+    print(f"\nASCII to netCDF4 conversion summary:")
+    print(f" - Successful conversions: {conversions_successful}")
+    print(f" - Skipped conversions:    {conversions_skipped}")
+    print(f" - Conversion errors:      {conversion_errors}")
+    print(f" - Total number of files:  {total_conversions}")

@@ -22,6 +22,7 @@ This module also supports an optional `-h` or `--help` flag which explains its u
 python get_files.py --help
 usage: get_files.py [-h] [--year_regex YEAR_REGEX] [--date_regex DATE_REGEX]
                     [--processes PROCESSES] [--test] [--netcdf4]
+                    [--skip_empty]
 
 A script to download COSMIC ASCII data files.
 
@@ -42,6 +43,7 @@ optional arguments:
                         pool. Defaults to 1.
   --test                Downloads a small subset of the data as a test.
   --netcdf4             Converts the ASCII data files to netCDF4.
+  --skip_empty          Skips converting files whose arrays are all empty.
 ```
 
 As explained in the `--help` message, there are also a few other optional flags.
@@ -51,17 +53,24 @@ As explained in the `--help` message, there are also a few other optional flags.
 * `--processes` overrides the default number of processes used in the `multiprocessing.Pool`.
 * `--test` downloads a small subset of the available data to test that the script is working. 
 * `--netcdf4` converts the ASCII data files to netCDF4.
+* `--skip_empty` skips converting files whose arrays are all empty.
 
 As an example, a successful run resembles the following:
 
 ```
-python get_files.py --year_regex=2006 --date_regex=2006-05-02 --netcdf4 --processes=4
-Crawling all ./cosmic<#>/postproc: 100%|████████████████████████████████| 6/6 [00:02<00:00,  2.07it/s]
-Crawling all ./cosmic<#>/.../<year>: 100%|██████████████████████████████| 6/6 [00:03<00:00,  1.90it/s]
-Crawling all ./cosmic<#>/.../<date>: 100%|██████████████████████████████| 3/3 [00:02<00:00,  1.04it/s]
-Crawling all ./cosmic<#>/.../L2/<format>: 100%|█████████████████████████| 4/4 [00:02<00:00,  1.66it/s]
-Downloading data files: 100%|███████████████████████████████████████████| 22/22 [00:05<00:00,  4.37it/s]
-Converting ASCII to netCDF4: 100%|██████████████████████████████████████| 20/20 [00:02<00:00,  7.67it/s]
+python get_files.py --year_regex=2006 --date_regex=2006-05-02 --netcdf4 --skip_empty --processes=4
+Crawling all ./cosmic<#>/postproc: 100%|████████████████████████████████| 6/6 [00:03<00:00,  1.61it/s]
+Crawling all ./cosmic<#>/.../<year>: 100%|██████████████████████████████| 6/6 [00:03<00:00,  1.59it/s]
+Crawling all ./cosmic<#>/.../<date>: 100%|██████████████████████████████| 3/3 [00:03<00:00,  1.17s/it]
+Crawling all ./cosmic<#>/.../L2/<format>: 100%|█████████████████████████| 4/4 [00:04<00:00,  1.09s/it]
+Downloading data files: 100%|███████████████████████████████████████████| 20/20 [00:26<00:00,  1.33s/it]
+Converting ASCII to netCDF4: 100%|██████████████████████████████████████| 20/20 [00:03<00:00,  6.32it/s]
+
+ASCII to netCDF4 conversion summary:
+ - Successful conversions: 17
+ - Skipped conversions:    3
+ - Conversion errors:      0
+ - Total conversion count: 20
 ```
 
 
@@ -82,6 +91,7 @@ This module also supports an optional `-h` or `--help` flag which explains its u
 ```
 python convert_files.py --help
 usage: convert_files.py [-h] [--logfile LOGFILE] [--processes PROCESSES]
+                        [--skip_empty]
                         path [path ...]
 
 A script to create inplace copies of COSMIC ASCII gzip-compressed data files
@@ -100,16 +110,24 @@ optional arguments:
   --processes PROCESSES
                         The number of processes to use in the multiprocessing
                         pool. Defaults to 1.
+  --skip_empty          Skips converting files whose arrays are all empty.
 ```
 
 As explained in the `--help` message, there are also a few other optional flags.
 
 * `--logfile` overrides the name of the logfile. 
 * `--processes` overrides the default number of processes used in the `multiprocessing.Pool`.
+* `--skip_empty` skips converting files whose arrays are all empty.
 
 As an example, a successful run resembles the following:
 
 ```
-python convert_files.py ./jpl_cosmic/2019/ --logfile=2019.log --processes=4
-Converting ASCII to netCDF4: 100%|██████████████████████████████████| 151/151 [00:04<00:00, 36.79it/s]
+python convert_files.py ./jpl_cosmic/2006/ --logfile=2006.log --skip_empty --processes=4
+Converting ASCII to netCDF4: 100%|██████████████████████████████████| 20/20 [00:02<00:00,  8.52it/s]
+
+ASCII to netCDF4 conversion summary:
+ - Successful conversions: 17
+ - Skipped conversions:    3
+ - Conversion errors:      0
+ - Total number of files:  20
 ```

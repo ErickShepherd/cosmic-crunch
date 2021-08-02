@@ -8,7 +8,7 @@ A module to download JPL COSMIC data files.
 Metadata:
 
     File:           get_files.py
-    File version:   1.2.1
+    File version:   1.3.1
     Python version: 3.7.3
     Date created:   2020-12-11
     Last updated:   2021-08-02
@@ -78,17 +78,17 @@ from convert_files import crawl_convert
 
 # %% Dunder definitions.
 __author__  = "Erick Edward Shepherd"
-__version__ = "1.2.1"
+__version__ = "1.3.1"
 
 # %% Constant definitions.
 URL_REGEX        = r"<a href=\"(?P<url>.*?)\""
 YEAR_URL_REGEX   = r"<a href=\"(?P<url>y\d{4}/)\""
 DATE_URL_REGEX   = r"<a href=\"(?P<url>\d{4}-\d{2}-\d{2}/)\""
-DATA_URL_REGEX   = r"<a href=\"(?P<url>\S*?\.(?:txt\.gz|nc))\""
+DATA_URL_REGEX   = r"<a href=\"(?P<url>\S*?\.(?:txt\.gz))\""
 FORMAT_URL_REGEX = r"<a href=\"(?P<url>\w+/)\""
 FILENAME_REGEX   = (r".*(?:\\|/)+cosmic\d(?:\\|/)+postproc(?:\\|/)+"
                     r"y(?P<year>\d{4})(?:\\|/)+(?P<dtg>\d{4}-\d{2}-\d{2})"
-                    r"(?:\\|/)+(?:L2)*(?:\\|/)+(?P<filetype>txt|nc)(?:\\|/)+"
+                    r"(?:\\|/)+(?:L2)*(?:\\|/)+(?P<filetype>txt)(?:\\|/)+"
                     r"(?P<filename>.*)")
 URL_REGEX        = re.compile(URL_REGEX,        re.MULTILINE)
 YEAR_URL_REGEX   = re.compile(YEAR_URL_REGEX,   re.MULTILINE)
@@ -553,8 +553,16 @@ if __name__ in ["__main__", "__mp_main__"]:
         help   = "Converts the ASCII data files to netCDF4."
     )
     
+    parser.add_argument(
+        "--skip_empty",
+        dest   = "skip_empty",
+        action = "store_true",
+        help   = "Skips converting files whose arrays are all empty."
+    )
+    
     parser.set_defaults(test_run   = False)
     parser.set_defaults(to_netcdf4 = False)
+    parser.set_defaults(skip_empty = False)
     
     argv   = parser.parse_args()
     kwargv = vars(argv)
@@ -564,6 +572,7 @@ if __name__ in ["__main__", "__mp_main__"]:
     processes  = kwargv["processes"]
     test_run   = kwargv["test_run"]
     to_nc4     = kwargv["to_netcdf4"]
+    skip_empty = kwargv["skip_empty"]
     
     if year_regex is not None:
         
@@ -607,4 +616,16 @@ if __name__ == "__main__":
     
     if to_nc4:
         
-        crawl_convert([SAVE_DIRECTORY], processes)
+        conversion_args  = ([SAVE_DIRECTORY], processes, skip_empty)
+        completion_codes = crawl_convert(*conversion_args)
+    
+        total_conversions      = len(completion_codes)
+        conversions_successful = completion_codes.count(0)
+        conversions_skipped    = completion_codes.count(1)
+        conversion_errors      = completion_codes.count(2)
+        
+        print(f"\nASCII to netCDF4 conversion summary:")
+        print(f" - Successful conversions: {conversions_successful}")
+        print(f" - Skipped conversions:    {conversions_skipped}")
+        print(f" - Conversion errors:      {conversion_errors}")
+        print(f" - Total number of files:  {total_conversions}")
