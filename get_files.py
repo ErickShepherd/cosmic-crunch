@@ -172,7 +172,7 @@ def parallelize(
                 results = list(tqdm(
                     pool.imap(function, domain),
                     total = total,
-                    desc = desc
+                    desc  = desc
                 ))
 
             else:
