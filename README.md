@@ -25,11 +25,14 @@ converts them into self-describing netCDF4 files.
 ## Installation
 
 ```bash
-pip install -e .
+pip install cosmic-crunch
 ```
 
 This installs the `cosmic-crunch` command with two subcommands, `get` and
 `convert`. Python 3.10+ is required.
+
+To hack on the package itself, install from a clone instead:
+`pip install -e .` (or `pip install -e ".[test]"` to run the test suite).
 
 ## Usage
 
