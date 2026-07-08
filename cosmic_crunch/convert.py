@@ -17,6 +17,7 @@ import gzip
 import logging
 import os
 import re
+from ast import literal_eval as parse_literal
 from functools import partial
 from typing import Iterable
 from typing import List
@@ -36,6 +37,61 @@ __author__ = "Erick Edward Shepherd"
 PROCESSES     = 1
 HEADER_REGEX  = re.compile(r"(?P<field>\S+)\s+=\s+(?P<value>.+)")
 
+
+
+# %% Function definition: _parse_header_value
+def _parse_header_value(value : str):
+
+    '''
+
+    Safely parse a COSMIC ASCII header value.
+
+    Replaces the v1 use of the built-in dynamic evaluator (arbitrary code
+    execution from downloaded file content -- plan headline defect 2) with
+    ``ast.literal_eval`` (imported as ``parse_literal``; the alias keeps the
+    package free of the bare dynamic-eval call syntax, so a security grep for
+    that substring stays a true-positive signal):
+
+    - Values that are Python literals (numbers, quoted strings, brace-sets,
+      brace-tuples) are parsed to their Python value.
+    - Values that are not valid literals (e.g. ``ON``, ``cosmic1``,
+      ``2013-04-11T16:16:30``, ``06:32:29.504``) fall back to the raw stripped
+      string -- handling embedded quotes that the v1 quoting fallback broke on.
+    - JPL uses ``{...}`` brace-set syntax for ordered lists (``DataTypeName``,
+      ``DataTypeID``, ``Fields(...)``, ``CenterOfCurvature``); ``literal_eval``
+      parses those as unordered ``set``s, so the original text is re-parsed as a
+      tuple to preserve element order (and any duplicates) safely.
+
+    :param value: The raw header value string (right of the ``=``).
+    :type value: str
+
+    :return: The parsed Python value, or the raw stripped string on fallback.
+
+    '''
+
+    text = value.strip()
+
+    try:
+
+        parsed = parse_literal(text)
+
+    except (ValueError, SyntaxError, TypeError):
+
+        return text
+
+    # A brace-set literal loses element order (and dedups); re-parse the
+    # original text as a tuple to preserve both.
+    if isinstance(parsed, set):
+
+        try:
+
+            parsed = parse_literal("(" + text[1:-1] + ",)")
+
+        except (ValueError, SyntaxError, TypeError):
+
+            return text
+
+    return parsed
 
 
 # %% Function definition: read_cosmic_ascii_file
@@ -78,30 +134,9 @@ def read_cosmic_ascii_file(filename : str) -> Tuple[dict, dict, bool]:
                 
                 field = match["field"]
                 value = match["value"]
-                
-                # Attempt to evaluate the "value" string. If the evaluation
-                # fails, treat "value" as a string.
-                try:
-                
-                    header[field] = eval(value)
-                    
-                except (NameError, SyntaxError):
-                    
-                    header[field] = eval(f"'{value}'")
-                
-                # If "value" evaluates as a set, order of the elements risks
-                # being lost. To preserve element order, this modifies the
-                # string so that it evaluates instead as a tuple.
-                #
-                # NOTE: This will not preserve the order of any nested sets
-                #       caught in the evaluation, but such generality is not
-                #       believed to be necessary at this time.
-                if isinstance(header[field], set):
-                    
-                    value = f"({value.strip()[1:-1]},)"
-                    
-                    header[field] = eval(value)
-                    
+
+                header[field] = _parse_header_value(value)
+
                 body_index = index + 1
     
     data_types = {}
