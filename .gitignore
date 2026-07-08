@@ -1,3 +1,15 @@
-*.log
-jpl_cosmic/
+# Python bytecode / caches
 __pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Packaging / build artifacts
+build/
+dist/
+*.egg-info/
+
+# Logs
+*.log
+
+# Downloaded data directories (default fetch SAVE_DIRECTORY)
+jpl_cosmic/

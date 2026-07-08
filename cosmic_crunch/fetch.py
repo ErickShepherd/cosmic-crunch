@@ -3,59 +3,12 @@
 
 '''
 
-A module to download JPL COSMIC data files.
+cosmic_crunch.fetch: crawl the JPL GENESIS site and download COSMIC
+radio-occultation ASCII data files.
 
-Metadata:
-
-    File:           get_files.py
-    File version:   1.3.1
-    Python version: 3.7.3
-    Date created:   2020-12-11
-    Last updated:   2021-08-02
-
-
-Author(s):
-
-    Erick Edward Shepherd
-     - E-mail:  dev@erickshepherd.com
-     - GitHub:  https://www.github.com/ErickShepherd
-     - Website: https://www.ErickShepherd.com
-
-
-Description:
-    
-    A module to crawl the JPL COSMIC website and download data files.
-
-
-Copyright:
-    
-    Copyright (c) 2020 of Erick Edward Shepherd, all rights reserved.
-
-
-License:
-    
-    This program is free software: you can redistribute it and/or modify it
-    under the terms of the GNU Affero General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or (at your
-    option) any later version.
-
-    This program is distributed in the hope that it will be useful, but
-    WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-    or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public
-    License for more details.
-
-    You should have received a copy of the GNU Affero General Public License
-    along with this program. If not, see <https://www.gnu.org/licenses/>.
-
-
-To-do:
-
-    - Document file and generalize it to allow scouring of specific years,
-      months, or days.
-      
-    - Add argparse support for the number of processes to use.
-    
-    - Add logging.
+Ported from the v1 ``get_files.py`` script (v1.3.1). The v1 per-file metadata
+and AGPL header have been removed; the package is MIT-licensed (see LICENSE)
+and versioned via ``cosmic_crunch.__version__``.
 
 '''
 

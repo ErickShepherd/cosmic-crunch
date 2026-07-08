@@ -3,64 +3,12 @@
 
 '''
 
-A module to convert JPL COSMIC data files from ASCII to netCDF4.
+cosmic_crunch.convert: convert JPL GENESIS COSMIC data files from
+gzip-compressed ASCII to the netCDF4 standard.
 
-Metadata:
-
-    File:           convert_files.py
-    File version:   1.3.3
-    Python version: 3.7.3
-    Date created:   2021-01-28
-    Last updated:   2021-08-02
-
-
-Author(s):
-
-    Erick Edward Shepherd
-     - E-mail:  dev@erickshepherd.com
-     - GitHub:  https://www.github.com/ErickShepherd
-     - Website: https://www.ErickShepherd.com
-
-
-Description:
-    
-    A module to convert JPL COSMIC data files from a gzip-compressed ASCII
-    storage format to the netCDF4 standard.
-
-
-Copyright:
-    
-    Copyright (c) 2021 of Erick Edward Shepherd, all rights reserved.
-
-
-License:
-    
-    This program is free software: you can redistribute it and/or modify it
-    under the terms of the GNU Affero General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or (at your
-    option) any later version.
-
-    This program is distributed in the hope that it will be useful, but
-    WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-    or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public
-    License for more details.
-
-    You should have received a copy of the GNU Affero General Public License
-    along with this program. If not, see <https://www.gnu.org/licenses/>.
-    
-    
-To-do:
-
-    - Switch from using `.endswith(".txt.gz")` to the use of a regular
-      expression to better discriminate between data files during recursive
-      file crawling.
-            
-    - Catch cases where a file is missing a header, missing data, or both
-      (empty).
-            
-    - Update the logging to use a rotating file handler.
-    
-    - Add option to erase ASCII file upon conversion.
+Ported from the v1 ``convert_files.py`` script (v1.3.3). The v1 per-file
+metadata and AGPL header have been removed; the package is MIT-licensed (see
+LICENSE) and versioned via ``cosmic_crunch.__version__``.
 
 '''
 

@@ -12,9 +12,8 @@ authors = [
     { name = "Erick Shepherd", email = "dev@erickshepherd.com" },
 ]
 keywords = ["COSMIC", "GENESIS", "JPL", "radio occultation", "netCDF4"]
-# NOTE: license metadata (MIT, owner-approved D1) is set alongside the LICENSE
-# file swap to keep the declared license and the shipped LICENSE
-# text consistent within a single change.
+license = "MIT"
+license-files = ["LICENSE"]
 dependencies = [
     # Floors track the versions the test matrix passes against;
     # requests/pandas floors are pinned by the design, netCDF4/tqdm are starting
