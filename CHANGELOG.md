@@ -41,6 +41,12 @@ purpose, packaged, tested, and fixed.
 - **Security:** removed `eval()` of downloaded header content (arbitrary code
   execution); header values are parsed with `ast.literal_eval` + raw-string
   fallback, preserving brace-set element order.
+- **Security:** path traversal in downloads — a hostile or tampered directory
+  listing could smuggle `../` through a filename and write outside the save
+  directory. Downloaded filenames are now reduced to a bare leaf and confined
+  to the save root (irreducible unsafe names are rejected before any fetch).
+- The v1 `FILES_TO_GET = -1` default silently dropped the last crawled file on
+  every non-test run (`[:-1]`); it now defaults to downloading everything.
 - `crawl_convert` processed only the first path argument (a `return` inside the
   per-path loop, plus a `paths` shadowing typo) — it now converts all paths.
 - Column-name loop-leak: rows of DataTypes with differing field counts were
