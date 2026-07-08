@@ -95,6 +95,15 @@ def run_get(args : argparse.Namespace) -> None:
 
     '''
 
+    # Resolve configuration onto the fetch module globals. Precedence for the
+    # base URL is: --base-url flag > COSMIC_CRUNCH_BASE_URL env (already applied
+    # as fetch.BASE_URL's default at import) > built-in default.
+    if args.base_url is not None:
+
+        fetch.BASE_URL = args.base_url
+
+    fetch.INSTRUMENT = args.instrument
+
     if args.year_regex is not None:
 
         fetch.YEAR_URL_REGEX = re.compile(
@@ -189,6 +198,28 @@ def build_parser() -> argparse.ArgumentParser:
         "get",
         help        = "Download COSMIC ASCII data files from the GENESIS site.",
         description = "Crawl the GENESIS site and download COSMIC ASCII files.",
+    )
+
+    get_parser.add_argument(
+        "--base-url",
+        dest    = "base_url",
+        type    = str,
+        default = None,
+        help    = (
+            "Override the crawl root URL. Precedence: this flag > the "
+            "COSMIC_CRUNCH_BASE_URL environment variable > the built-in "
+            f"default ({fetch.BASE_URL})."
+        ),
+    )
+
+    get_parser.add_argument(
+        "--instrument",
+        type    = str,
+        default = fetch.INSTRUMENT,
+        help    = (
+            "The instrument tree to crawl (a substring filter on the site's "
+            f"instrument directories). Defaults to \"{fetch.INSTRUMENT}\"."
+        ),
     )
 
     get_parser.add_argument(

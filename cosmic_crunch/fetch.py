@@ -37,7 +37,12 @@ YEAR_URL_REGEX   = r"<a href=\"(?P<url>y\d{4}/)\""
 DATE_URL_REGEX   = r"<a href=\"(?P<url>\d{4}-\d{2}-\d{2}/)\""
 DATA_URL_REGEX   = r"<a href=\"(?P<url>\S*?\.(?:txt\.gz))\""
 FORMAT_URL_REGEX = r"<a href=\"(?P<url>\w+/)\""
-FILENAME_REGEX   = (r".*(?:\\|/)+cosmic\d(?:\\|/)+postproc(?:\\|/)+"
+# NOTE: the instrument segment is matched as a generic path segment
+# (``[^\\/]+``) rather than a hardcoded ``cosmic\d``, so ``--instrument`` can
+# select non-COSMIC trees (champ, gracea, ...). The URLs fed to this regex are
+# already instrument-filtered upstream, so it only needs to extract the path
+# fields, not re-validate the instrument.
+FILENAME_REGEX   = (r".*(?:\\|/)+[^\\/]+(?:\\|/)+postproc(?:\\|/)+"
                     r"y(?P<year>\d{4})(?:\\|/)+(?P<dtg>\d{4}-\d{2}-\d{2})"
                     r"(?:\\|/)+(?:L2)*(?:\\|/)+(?P<filetype>txt)(?:\\|/)+"
                     r"(?P<filename>.*)")
@@ -50,7 +55,14 @@ FILENAME_REGEX   = re.compile(FILENAME_REGEX,   re.DOTALL)
 INSTRUMENT       = "cosmic"
 DATA_DIRECTORY   = "postproc"
 DATA_LEVEL       = "L2"
-BASE_URL         = "https://genesis.jpl.nasa.gov/ftp/pub/genesis/glevels"
+# New v2 crawl root (the v1 /ftp/pub/genesis/glevels root is dead -- see
+# docs/site-notes.md). Overridable via the COSMIC_CRUNCH_BASE_URL env var and,
+# with higher precedence, the `--base-url` CLI flag (handled in cli.run_get).
+# No trailing slash: crawl functions build URLs as ``BASE_URL + "/" + segment``.
+BASE_URL         = os.environ.get(
+    "COSMIC_CRUNCH_BASE_URL",
+    "https://genesis.jpl.nasa.gov/ftp/glevels",
+)
 SAVE_DIRECTORY   = os.path.abspath("./jpl_cosmic")
 CHUNK_SIZE       = 2 ** 13
 PROCESSES        = 1
@@ -73,7 +85,10 @@ def _crawl_cosmic_urls() -> List[str]:
         content     = request.content.decode()
         urls        = URL_REGEX.findall(content)
         cosmic_urls = [u for u in urls if INSTRUMENT in u.lower()]
-        cosmic_urls = [BASE_URL + "/" + u for u in cosmic_urls]
+        # rstrip the instrument segment's trailing "/" so the join yields
+        # ".../<instrument>/postproc" (single slash), matching the reachable
+        # URL confirmed in docs/site-notes.md -- not ".../<instrument>//postproc".
+        cosmic_urls = [BASE_URL + "/" + u.rstrip("/") for u in cosmic_urls]
         cosmic_urls = [u + "/" + DATA_DIRECTORY for u in cosmic_urls]
     
     return cosmic_urls
