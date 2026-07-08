@@ -9,9 +9,9 @@ De-duplicates the ``parallelize`` implementation that was copy-pasted between
 ``get_files.py`` and ``convert_files.py`` in v1, and gathers the ``flatten`` and
 ``retry_decorator`` helpers alongside it.
 
-NOTE (v2 port): the helpers are moved verbatim from v1 -- behavior is unchanged
-in this packaging step. In particular ``retry_decorator`` still retries forever
-and swallows every exception; the bounded-retry fix is Phase 3 (plan item 8).
+``retry_decorator`` implements the v2 bounded retry (``RETRY_ATTEMPTS`` attempts
+with exponential backoff, each failure logged, the last exception re-raised) --
+replacing v1's infinite, silent retry loop.
 
 '''
 
