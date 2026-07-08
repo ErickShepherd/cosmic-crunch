@@ -9,7 +9,7 @@ authors:
   - family-names: "Shepherd"
     given-names: "Erick"
     email: "dev@erickshepherd.com"
-version: "2.0.0"
+version: "2.0.1"
 date-released: "2026-07-08"
 license: MIT
 repository-code: "https://github.com/ErickShepherd/cosmic-crunch"

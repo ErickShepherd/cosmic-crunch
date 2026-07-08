@@ -4,6 +4,17 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] — 2026-07-08
+
+Docs/packaging only — no code changes.
+
+### Changed
+- README now leads installation with `pip install cosmic-crunch` (the package is
+  published on PyPI), keeping the editable install as the contributor path. The
+  v2.0.0 PyPI page had been built before this fix and still showed
+  `pip install -e .`; this release republishes with the corrected instructions.
+- Repo/project URLs point at the renamed `cosmic-crunch` GitHub slug.
+
 ## [2.0.0] — 2026-07-08
 
 The 2020 JPL site restructure broke v1 (it silently downloaded nothing), and v1
@@ -69,4 +80,5 @@ The original two-script tool (unpackaged, AGPL-3.0, never published to PyPI):
 - `convert_files.py` (v1.3.3) — convert COSMIC ASCII files to netCDF4. Created
   2021-01-28, last updated 2021-08-02.
 
+[2.0.1]: https://github.com/ErickShepherd/cosmic-crunch/releases/tag/v2.0.1
 [2.0.0]: https://github.com/ErickShepherd/cosmic-crunch/releases/tag/v2.0.0
