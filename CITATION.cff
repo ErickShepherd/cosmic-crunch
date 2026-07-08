@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "cosmic-crunch"
+abstract: >-
+  Download JPL GENESIS COSMIC radio-occultation ASCII data files and convert
+  them to netCDF4.
+type: software
+authors:
+  - family-names: "Shepherd"
+    given-names: "Erick"
+    email: "dev@erickshepherd.com"
+version: "2.0.0"
+date-released: "2026-07-08"
+license: MIT
+repository-code: "https://github.com/ErickShepherd/cosmic_crunch"
+url: "https://github.com/ErickShepherd/cosmic_crunch"
+keywords:
+  - COSMIC
+  - GENESIS
+  - JPL
+  - "radio occultation"
+  - netCDF4

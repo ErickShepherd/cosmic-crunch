@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cosmic-crunch"
+dynamic = ["version"]
+description = "Download JPL GENESIS COSMIC radio-occultation ASCII files and convert them to netCDF4."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "Erick Shepherd", email = "dev@erickshepherd.com" },
+]
+keywords = ["COSMIC", "GENESIS", "JPL", "radio occultation", "netCDF4"]
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = [
+    # Floors track the versions the test matrix passes against;
+    # requests/pandas floors are pinned by the design, netCDF4/tqdm are starting
+    # points to be confirmed. Loosening below these is a deliberate decision.
+    "requests>=2.28",
+    "pandas>=2.0",
+    "netCDF4>=1.6",
+    "tqdm>=4.60",
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.scripts]
+cosmic-crunch = "cosmic_crunch.cli:main"
+
+[tool.hatch.version]
+path = "cosmic_crunch/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["cosmic_crunch"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+# Permissive: keep ruff's default lint set (pyflakes `F` + the core pycodestyle
+# `E4`/`E7`/`E9` groups), which catches real problems -- unused imports,
+# undefined names, comparison/statement bugs -- without fighting this codebase's
+# deliberate aligned-assignment and blank-line style (E1/E2 spacing rules and
+# E501 line length are intentionally NOT enforced).
