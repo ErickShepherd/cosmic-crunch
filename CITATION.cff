@@ -12,8 +12,8 @@ authors:
 version: "2.0.0"
 date-released: "2026-07-08"
 license: MIT
-repository-code: "https://github.com/ErickShepherd/cosmic_crunch"
-url: "https://github.com/ErickShepherd/cosmic_crunch"
+repository-code: "https://github.com/ErickShepherd/cosmic-crunch"
+url: "https://github.com/ErickShepherd/cosmic-crunch"
 keywords:
   - COSMIC
   - GENESIS

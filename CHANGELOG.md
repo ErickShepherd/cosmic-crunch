@@ -69,4 +69,4 @@ The original two-script tool (unpackaged, AGPL-3.0, never published to PyPI):
 - `convert_files.py` (v1.3.3) — convert COSMIC ASCII files to netCDF4. Created
   2021-01-28, last updated 2021-08-02.
 
-[2.0.0]: https://github.com/ErickShepherd/cosmic_crunch/releases/tag/v2.0.0
+[2.0.0]: https://github.com/ErickShepherd/cosmic-crunch/releases/tag/v2.0.0

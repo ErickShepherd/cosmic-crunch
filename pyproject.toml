@@ -30,6 +30,9 @@ test = ["pytest"]
 [project.scripts]
 cosmic-crunch = "cosmic_crunch.cli:main"
 
+[project.urls]
+Homepage = "https://github.com/ErickShepherd/cosmic-crunch"
+
 [tool.hatch.version]
 path = "cosmic_crunch/__init__.py"
 
