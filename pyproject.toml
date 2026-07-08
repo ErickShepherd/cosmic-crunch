@@ -25,10 +25,8 @@ dependencies = [
     "tqdm>=4.60",
 ]
 
-# NOTE: the `cosmic-crunch` console entry point is added together
-# with cosmic_crunch/cli.py, so the declared script always resolves to real code.
-# [project.scripts]
-# cosmic-crunch = "cosmic_crunch.cli:main"
+[project.scripts]
+cosmic-crunch = "cosmic_crunch.cli:main"
 
 [tool.hatch.version]
 path = "cosmic_crunch/__init__.py"

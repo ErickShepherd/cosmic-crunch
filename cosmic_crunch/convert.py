@@ -65,12 +65,10 @@ To-do:
 '''
 
 # %% Standard library imports.
-import argparse
 import gzip
 import logging
 import os
 import re
-import sys
 from functools import partial
 from typing import Iterable
 from typing import List
@@ -89,18 +87,7 @@ __author__ = "Erick Edward Shepherd"
 # %% Constant definitions.
 PROCESSES     = 1
 HEADER_REGEX  = re.compile(r"(?P<field>\S+)\s+=\s+(?P<value>.+)")
-LOGGER_FORMAT = "%(asctime)-19s || %(levelname)-8s || %(name)s :: %(message)s"
-LOG_FILENAME  = f"{os.path.basename(__file__)}.log"
 
-# %% Logging configuration.
-# - This conditional protects an overridden logging configuration.
-if __name__ not in ["__main__", "__mp_main__"]:
-    
-    logging.basicConfig(
-        level    = logging.INFO,
-        format   = LOGGER_FORMAT,
-        handlers = [logging.FileHandler(LOG_FILENAME)],
-    )
 
 
 # %% Function definition: read_cosmic_ascii_file
@@ -407,101 +394,4 @@ def crawl_convert(paths      : Iterable,
         )
         
         return completion_codes
-    
 
-# %% Main-multiprocessing hybrid entry point.
-# - Allows CLI arguments to be shared between child processes.
-if __name__ in ["__main__", "__mp_main__"]:
-        
-    parser = argparse.ArgumentParser(
-        description = (
-            "A script to create inplace copies of COSMIC ASCII "
-            "gzip-compressed data files in netCDF4 format."
-        )
-    )
-    
-    parser.add_argument(
-        "path",
-        type    = str,
-        nargs   = "+",
-        help    = (
-            "The path to one or more COSMIC ASCII gzip-compressed data files "
-            "or directories containing them. If one or more directories are "
-            "given, they will be crawled recursively."
-        )
-    )
-    
-    parser.add_argument(
-        "--logfile",
-        type    = str,
-        default = None,
-        help    = (
-            "A custom name to use for the log file. Overrides the default "
-            f"\"{LOG_FILENAME}\"."
-        )
-    )
-    
-    parser.add_argument(
-        "--processes",
-        type    = int,
-        default = PROCESSES,
-        help    = (
-            "The number of processes to use in the multiprocessing pool. "
-            f"Defaults to {PROCESSES}."
-        )
-    )
-    
-    parser.add_argument(
-        "--skip_empty",
-        dest   = "skip_empty",
-        action = "store_true",
-        help   = "Skips converting files whose arrays are all empty."
-    )
-    
-    parser.set_defaults(skip_empty = False)
-    
-    try:
-    
-        argv   = parser.parse_args()
-        kwargv = vars(argv)
-        
-    except SystemExit:
-        
-        sys.exit()
-    
-    if kwargv["logfile"] is not None:
-                    
-        handlers = [logging.FileHandler(kwargv["logfile"])]
-        
-    else:
-        
-        handlers = [logging.FileHandler(LOG_FILENAME)]
-        
-    logging.basicConfig(
-        level    = logging.INFO,
-        format   = LOGGER_FORMAT,
-        handlers = handlers,
-    )
-    
-    logger = logging.getLogger("__main__")
-    
-    path       = kwargv["path"]
-    processes  = kwargv["processes"]
-    skip_empty = kwargv["skip_empty"]
-    
-# %% Main entry point.
-# - Allows forking to start child processes.
-if __name__ == "__main__":
-    
-    completion_codes = crawl_convert(path, processes, skip_empty)
-    
-    total_conversions      = len(completion_codes)
-    conversions_successful = completion_codes.count(0)
-    conversions_skipped    = completion_codes.count(1)
-    conversion_errors      = completion_codes.count(2)
-    
-    print(f"\nASCII to netCDF4 conversion summary:")
-    print(f" - Successful conversions: {conversions_successful}")
-    print(f" - Skipped conversions:    {conversions_skipped}")
-    print(f" - Conversion errors:      {conversion_errors}")
-    print(f" - Total number of files:  {total_conversions}")
