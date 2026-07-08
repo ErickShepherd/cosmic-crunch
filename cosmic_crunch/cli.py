@@ -14,10 +14,10 @@ This module owns ALL logging configuration (plan item 5): logging is configured
 here in ``main()`` at run time, never at import time -- importing any
 ``cosmic_crunch`` submodule no longer creates a stray log file in the CWD.
 
-NOTE (v2 port): the ``get`` handler still drives the crawler by rebinding module
-globals on ``cosmic_crunch.fetch`` (INSTRUMENT, the year/date regexes, ...),
-mirroring v1 behavior exactly. Turning that configuration into real flags
-(``--base-url``, ``--instrument``) and fixing the crawler is Phase 3 (items 7-8).
+NOTE: the ``get`` handler configures the crawler by rebinding module globals on
+``cosmic_crunch.fetch`` (BASE_URL, INSTRUMENT, the year/date regexes) from the
+parsed flags -- a deliberate v1-shaped mechanism kept so the multiprocessing
+``__mp_main__`` re-import sees the same configuration.
 
 '''
 
@@ -90,9 +90,10 @@ def run_get(args : argparse.Namespace) -> None:
     Handler for ``cosmic-crunch get``: crawl the site, download the ASCII data
     files, and optionally convert them to netCDF4.
 
-    Ported verbatim from ``get_files.py``'s ``__main__`` block, including the
-    ``[:FILES_TO_GET]`` slice (v1 default -1 drops the last URL -- preserved
-    here for behavior parity; a Phase-3 concern, not this port's).
+    Ported from ``get_files.py``'s ``__main__`` block. The v1 ``FILES_TO_GET``
+    default of ``-1`` silently dropped the last crawled URL on every run; v2
+    defaults it to ``None`` (download everything) and caps at 10 only under
+    ``--test``.
 
     '''
 

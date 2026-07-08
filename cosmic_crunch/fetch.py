@@ -66,7 +66,7 @@ BASE_URL         = os.environ.get(
 SAVE_DIRECTORY   = os.path.abspath("./jpl_cosmic")
 CHUNK_SIZE       = 2 ** 13
 PROCESSES        = 1
-FILES_TO_GET     = -1
+FILES_TO_GET     = None
 
 
 # %% Exception definitions.
@@ -136,7 +136,7 @@ def _crawl_year_urls(cosmic_url : str) -> List[str]:
 
         content   = request.content.decode()
         year_urls = YEAR_URL_REGEX.findall(content)
-        year_urls = [cosmic_url + "/" + year for year in year_urls]
+        year_urls = [cosmic_url.rstrip("/") + "/" + year for year in year_urls]
 
     return year_urls
 
@@ -167,7 +167,7 @@ def _crawl_date_urls(year_url : str) -> List[str]:
 
         content   = request.content.decode()
         date_urls = DATE_URL_REGEX.findall(content)
-        date_urls = [year_url + "/" + date for date in date_urls]
+        date_urls = [year_url.rstrip("/") + "/" + date for date in date_urls]
 
     return date_urls
 
@@ -209,7 +209,7 @@ def _crawl_format_urls(date_url : str) -> List[str]:
 
         content    = request.content.decode()
         format_urls = FORMAT_URL_REGEX.findall(content)
-        format_urls = [date_url + "/" + url for url in format_urls]
+        format_urls = [date_url.rstrip("/") + "/" + url for url in format_urls]
                         
     return format_urls
 
@@ -240,7 +240,7 @@ def _crawl_data_urls(format_url : str) -> List[str]:
 
         site_data = request.content.decode()
         filenames = DATA_URL_REGEX.findall(site_data)
-        data_urls = [format_url + "/" + name for name in filenames]
+        data_urls = [format_url.rstrip("/") + "/" + name for name in filenames]
 
     return data_urls
 
@@ -283,11 +283,33 @@ def _download_data_file(source_url : str) -> None:
     filetype = metadata["filetype"]
     filename = metadata["filename"]
 
+    # The <filename> group is greedy and the listing it ultimately comes from
+    # is remote content: a hostile or tampered listing could smuggle path
+    # separators or ".." through an href and turn this into an arbitrary
+    # filesystem write. Reduce it to a bare leaf name and refuse anything that
+    # would resolve outside the save directory.
+    filename = re.split(r"[\\/]+", filename)[-1]
+
+    if filename in ("", ".", ".."):
+
+        raise ValueError(
+            f"Refusing unsafe filename derived from URL: {source_url!r}"
+        )
+
     dst_directory = os.path.join(SAVE_DIRECTORY, year, dtg, filetype)
+    dst_path      = os.path.join(dst_directory, filename)
+
+    save_root = os.path.abspath(SAVE_DIRECTORY)
+
+    if os.path.commonpath([os.path.abspath(dst_path), save_root]) != save_root:
+
+        raise ValueError(
+            f"Refusing to write outside the save directory: {dst_path!r} "
+            f"(from URL {source_url!r})"
+        )
 
     os.makedirs(dst_directory, exist_ok = True)
 
-    dst_path  = os.path.join(dst_directory, filename)
     part_path = dst_path + ".part"
 
     with requests.get(source_url, stream = True) as request:
