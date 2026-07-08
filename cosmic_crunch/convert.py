@@ -40,7 +40,7 @@ HEADER_REGEX  = re.compile(r"(?P<field>\S+)\s+=\s+(?P<value>.+)")
 
 
 # %% Function definition: _parse_header_value
-def _parse_header_value(value : str):
+def _parse_header_value(value : str) -> object:
 
     '''
 
@@ -199,7 +199,7 @@ def read_cosmic_ascii_file(filename : str) -> Tuple[dict, dict, bool]:
 
 
 # %% Function definition: write_cosmic_netcdf4_file
-def write_cosmic_netcdf4_file(filename : str, header : dict, data : dict):
+def write_cosmic_netcdf4_file(filename : str, header : dict, data : dict) -> None:
     
     '''
     

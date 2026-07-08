@@ -37,7 +37,14 @@ def flatten(list_of_lists : List[List]) -> List:
 
     '''
 
-    # TODO
+    Flatten one level of nesting: concatenate a list of lists into a single
+    list, preserving order.
+
+    :param list_of_lists: An iterable of lists to concatenate.
+    :type list_of_lists: List[List]
+
+    :return: The concatenated list.
+    :rtype: List
 
     '''
 

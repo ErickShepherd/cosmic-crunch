@@ -13,6 +13,7 @@ and versioned via ``cosmic_crunch.__version__``.
 '''
 
 # %% Standard library imports.
+import logging
 import os
 import re
 from typing import Callable
@@ -86,11 +87,11 @@ class NoDataFilesFoundError(RuntimeError):
 
 # %% Function definition: _crawl_cosmic_urls
 def _crawl_cosmic_urls() -> List[str]:
-    
     '''
-    
-    # TODO
-    
+
+    Crawl the site root (``BASE_URL``) and return the ``postproc`` directory
+    URL for each instrument directory whose name contains ``INSTRUMENT``.
+
     '''
 
     with requests.get(BASE_URL) as request:
@@ -111,13 +112,11 @@ def _crawl_cosmic_urls() -> List[str]:
 
 # %% Function definition: crawl_cosmic_urls
 def crawl_cosmic_urls(*args : List, **kwargs : Dict) -> Callable:
-    
     '''
-    
-    Pickleable with decorator.
-    
-    # TODO
-    
+
+    Retry-wrapped, pickleable wrapper around :func:`_crawl_cosmic_urls`
+    (safe to use as a ``multiprocessing`` worker).
+
     '''
     
     return retry_decorator(_crawl_cosmic_urls)(*args, **kwargs)
@@ -125,11 +124,11 @@ def crawl_cosmic_urls(*args : List, **kwargs : Dict) -> Callable:
 
 # %% Function definition: _crawl_year_urls
 def _crawl_year_urls(cosmic_url : str) -> List[str]:
-    
     '''
-        
-    # TODO
-    
+
+    Given an instrument ``postproc`` URL, return the URL of each of its year
+    (``y<YYYY>/``) directories.
+
     '''
              
     with requests.get(cosmic_url) as request:
@@ -144,14 +143,11 @@ def _crawl_year_urls(cosmic_url : str) -> List[str]:
 
 
 # %% Function definition: crawl_year_urls
-def crawl_year_urls(*args : List, **kwargs : Dict):
-    
+def crawl_year_urls(*args : List, **kwargs : Dict) -> Callable:
     '''
-    
-    Pickleable with decorator.
-    
-    # TODO
-    
+
+    Retry-wrapped, pickleable wrapper around :func:`_crawl_year_urls`.
+
     '''
     
     return retry_decorator(_crawl_year_urls)(*args, **kwargs)
@@ -159,11 +155,11 @@ def crawl_year_urls(*args : List, **kwargs : Dict):
 
 # %% Function definition: _crawl_date_urls
 def _crawl_date_urls(year_url : str) -> List[str]:
-    
     '''
-        
-    # TODO
-    
+
+    Given a year-directory URL, return the URL of each of its date
+    (``YYYY-MM-DD/``) directories.
+
     '''
     
     with requests.get(year_url) as request:
@@ -179,13 +175,10 @@ def _crawl_date_urls(year_url : str) -> List[str]:
 
 # %% Function definition: crawl_date_urls
 def crawl_date_urls(*args : List, **kwargs : Dict) -> Callable:
-    
     '''
-    
-    Pickleable with decorator.
-    
-    # TODO
-    
+
+    Retry-wrapped, pickleable wrapper around :func:`_crawl_date_urls`.
+
     '''
     
     return retry_decorator(_crawl_date_urls)(*args, **kwargs)
@@ -193,11 +186,11 @@ def crawl_date_urls(*args : List, **kwargs : Dict) -> Callable:
 
 # %% Function definition: _crawl_format_urls
 def _crawl_format_urls(date_url : str) -> List[str]:
-    
     '''
-        
-    # TODO
-    
+
+    Given a date-directory URL, descend into the ``L2`` level and return the
+    URL of each format (``txt/``, ``nc/``) directory beneath it.
+
     '''
     
     with requests.get(date_url) as request:
@@ -224,13 +217,10 @@ def _crawl_format_urls(date_url : str) -> List[str]:
 
 # %% Function definition: crawl_format_urls
 def crawl_format_urls(*args : List, **kwargs : Dict) -> Callable:
-    
     '''
-    
-    Pickleable with decorator.
-    
-    # TODO
-    
+
+    Retry-wrapped, pickleable wrapper around :func:`_crawl_format_urls`.
+
     '''
     
     return retry_decorator(_crawl_format_urls)(*args, **kwargs)
@@ -238,11 +228,11 @@ def crawl_format_urls(*args : List, **kwargs : Dict) -> Callable:
 
 # %% Function definition: _crawl_data_urls
 def _crawl_data_urls(format_url : str) -> List[str]:
-    
     '''
-        
-    # TODO
-    
+
+    Given a format-directory URL (e.g. ``.../L2/txt/``), return the URL of
+    each ``.txt.gz`` data file it contains.
+
     '''
         
     with requests.get(format_url) as request:
@@ -258,13 +248,10 @@ def _crawl_data_urls(format_url : str) -> List[str]:
 
 # %% Function definition: crawl_data_urls
 def crawl_data_urls(*args : List, **kwargs : Dict) -> Callable:
-    
     '''
-    
-    Pickleable with decorator.
-    
-    # TODO
-    
+
+    Retry-wrapped, pickleable wrapper around :func:`_crawl_data_urls`.
+
     '''
     
     return retry_decorator(_crawl_data_urls)(*args, **kwargs)
@@ -272,50 +259,71 @@ def crawl_data_urls(*args : List, **kwargs : Dict) -> Callable:
 
 # %% Function definition: _download_data_file
 def _download_data_file(source_url : str) -> None:
-    
+
     '''
-        
-    # TODO
-    
+
+    Download a single COSMIC data file to ``SAVE_DIRECTORY/<year>/<dtg>/<type>/``.
+
+    The download is **atomic and resumable**: content is streamed to a
+    ``<name>.part`` temporary file and then atomically ``os.replace``\\d into
+    place, so an interrupted download never leaves a truncated final file. A file
+    that already exists with a size matching the server's ``Content-Length`` is
+    skipped, making bulk re-pulls cheap and interrupt-safe.
+
+    :param source_url: The fully-qualified URL of the data file to download.
+    :type source_url: str
+
     '''
-    
+
+    logger = logging.getLogger("cosmic_crunch.fetch")
+
     metadata = FILENAME_REGEX.match(source_url)
 
     year     = metadata["year"]
     dtg      = metadata["dtg"]
     filetype = metadata["filetype"]
     filename = metadata["filename"]
-    
-    dst_directory = os.path.join(SAVE_DIRECTORY, year)
-    dst_directory = os.path.join(dst_directory,  dtg)
-    dst_directory = os.path.join(dst_directory,  filetype)
-    
-    if not os.path.exists(dst_directory):
-        
-        os.makedirs(dst_directory)
-    
-    dst_path = os.path.join(dst_directory, filename)
-    
+
+    dst_directory = os.path.join(SAVE_DIRECTORY, year, dtg, filetype)
+
+    os.makedirs(dst_directory, exist_ok = True)
+
+    dst_path  = os.path.join(dst_directory, filename)
+    part_path = dst_path + ".part"
+
     with requests.get(source_url, stream = True) as request:
-            
+
         request.raise_for_status()
-            
-        with open(dst_path, "wb") as file:
-                
+
+        # Skip if the finished file already exists and its size matches the
+        # server's Content-Length (a completed download; .part is never left in
+        # place, so an existing dst_path is known-complete).
+        expected_size = request.headers.get("Content-Length")
+
+        if (os.path.exists(dst_path)
+                and expected_size is not None
+                and os.path.getsize(dst_path) == int(expected_size)):
+
+            logger.info("Skipping already-downloaded file: %s", dst_path)
+
+            return
+
+        with open(part_path, "wb") as file:
+
             for chunk in request.iter_content(chunk_size = CHUNK_SIZE):
-                
+
                 file.write(chunk)
+
+    # Atomic publish: rename the completed .part over the destination.
+    os.replace(part_path, dst_path)
 
 
 # %% Function definition: download_data_file
 def download_data_file(*args : List, **kwargs : Dict) -> Callable:
-    
     '''
-    
-    Pickleable with decorator.
-    
-    # TODO
-    
+
+    Retry-wrapped, pickleable wrapper around :func:`_download_data_file`.
+
     '''
     
     return retry_decorator(_download_data_file)(*args, **kwargs)
@@ -323,11 +331,12 @@ def download_data_file(*args : List, **kwargs : Dict) -> Callable:
 
 # %% Function definition: crawl_site
 def crawl_site(processes : int = PROCESSES) -> List[str]:
-    
     '''
-    
-    # TODO
-    
+
+    Crawl the full instrument tree (root -> postproc -> year -> date -> L2 ->
+    format) and return the URL of every ``.txt.gz`` data file found. Raises
+    :class:`NoDataFilesFoundError` if the crawl finds nothing.
+
     '''
     
     cosmic_urls = crawl_cosmic_urls()
