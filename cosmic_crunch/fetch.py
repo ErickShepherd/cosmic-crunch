@@ -27,7 +27,6 @@ import requests
 from cosmic_crunch._parallel import flatten
 from cosmic_crunch._parallel import parallelize
 from cosmic_crunch._parallel import retry_decorator
-from cosmic_crunch.convert import crawl_convert
 
 # %% Dunder definitions.
 __author__ = "Erick Edward Shepherd"

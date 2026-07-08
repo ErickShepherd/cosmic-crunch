@@ -1,6 +1,5 @@
 '''Full ASCII -> netCDF4 -> read-back round-trip test (offline).'''
 
-import os
 import shutil
 
 import netCDF4 as nc
