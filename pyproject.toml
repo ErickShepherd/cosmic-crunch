@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cosmic-crunch"
+dynamic = ["version"]
+description = "Download JPL GENESIS COSMIC radio-occultation ASCII files and convert them to netCDF4."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "Erick Shepherd", email = "dev@erickshepherd.com" },
+]
+keywords = ["COSMIC", "GENESIS", "JPL", "radio occultation", "netCDF4"]
+# NOTE: license metadata (MIT, owner-approved D1) is set alongside the LICENSE
+# file swap to keep the declared license and the shipped LICENSE
+# text consistent within a single change.
+dependencies = [
+    # Floors track the versions the test matrix passes against;
+    # requests/pandas floors are pinned by the design, netCDF4/tqdm are starting
+    # points to be confirmed. Loosening below these is a deliberate decision.
+    "requests>=2.28",
+    "pandas>=2.0",
+    "netCDF4>=1.6",
+    "tqdm>=4.60",
+]
+
+# NOTE: the `cosmic-crunch` console entry point is added together
+# with cosmic_crunch/cli.py, so the declared script always resolves to real code.
+# [project.scripts]
+# cosmic-crunch = "cosmic_crunch.cli:main"
+
+[tool.hatch.version]
+path = "cosmic_crunch/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["cosmic_crunch"]
