@@ -69,6 +69,21 @@ PROCESSES        = 1
 FILES_TO_GET     = -1
 
 
+# %% Exception definitions.
+class NoDataFilesFoundError(RuntimeError):
+
+    '''
+
+    Raised when a crawl completes successfully but finds zero data files.
+
+    This is the v2 "fail loud" fix (design spine): the v1 crawler returned an
+    empty list and the script exited *successfully having downloaded nothing*
+    when the site moved. A zero-result crawl is now a loud error, not a silent
+    no-op.
+
+    '''
+
+
 # %% Function definition: _crawl_cosmic_urls
 def _crawl_cosmic_urls() -> List[str]:
     
@@ -336,6 +351,16 @@ def crawl_site(processes : int = PROCESSES) -> List[str]:
     data_urls = flatten(parallelize(
         crawl_data_urls, format_urls, data_desc, processes
     ))
-    
+
+    # Fail loud: a crawl that found nothing is an error, not a silent success.
+    if not data_urls:
+
+        raise NoDataFilesFoundError(
+            f"No data files found crawling {BASE_URL} for instrument "
+            f"'{INSTRUMENT}'. The site layout may have changed, or the "
+            f"year/date filters matched nothing. Check --base-url / "
+            f"--instrument / --year_regex / --date_regex."
+        )
+
     return data_urls
 

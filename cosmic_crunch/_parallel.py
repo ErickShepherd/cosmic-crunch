@@ -16,7 +16,9 @@ and swallows every exception; the bounded-retry fix is Phase 3 (plan item 8).
 '''
 
 # %% Standard library imports.
+import logging
 import multiprocessing
+import time
 from typing import Callable
 from typing import Iterable
 from typing import List
@@ -25,7 +27,9 @@ from typing import List
 from tqdm import tqdm
 
 # %% Constant definitions.
-PROCESSES = 1
+PROCESSES          = 1
+RETRY_ATTEMPTS     = 3
+RETRY_BACKOFF_BASE = 2  # seconds; delay before retry N is base ** (N - 1)
 
 
 # %% Function definition: flatten
@@ -122,32 +126,65 @@ def parallelize(
 
 
 # %% Function definition: retry_decorator
-def retry_decorator(func : Callable) -> Callable:
+def retry_decorator(
+        func         : Callable,
+        attempts     : int = RETRY_ATTEMPTS,
+        backoff_base : float = RETRY_BACKOFF_BASE) -> Callable:
 
     '''
 
-    # TODO
+    Wraps ``func`` with bounded retry: up to ``attempts`` tries with exponential
+    backoff (``backoff_base ** (n - 1)`` seconds before retry ``n``). Every
+    failure is logged; after the final attempt the last exception is re-raised.
+
+    This is the v2 fix for the v1 infinite-silent-retry defect (a permanent
+    failure -- e.g. the 2020 site restructure -- used to hang forever).
+
+    :param func: The callable to wrap.
+    :type func: Callable
+
+    :param attempts: The maximum number of attempts (default ``RETRY_ATTEMPTS``).
+    :type attempts: int
+
+    :param backoff_base: The exponential-backoff base in seconds.
+    :type backoff_base: float
+
+    :return: The wrapped callable.
+    :rtype: Callable
 
     '''
+
+    logger = logging.getLogger("cosmic_crunch.retry")
 
     def wrapper(*args, **kwargs):
 
-        retry    = True
-        attempts = 0
+        name          = getattr(func, "__name__", repr(func))
+        last_exception = None
 
-        while retry:
-
-            attempts += 1
+        for attempt in range(1, attempts + 1):
 
             try:
 
-                value = func(*args, **kwargs)
-                retry = False
+                return func(*args, **kwargs)
 
-                return value
+            except Exception as error:
 
-            except Exception:
+                last_exception = error
 
-                pass
+                logger.warning(
+                    "Attempt %d/%d of %s failed: %s",
+                    attempt, attempts, name, error,
+                )
+
+                if attempt < attempts:
+
+                    time.sleep(backoff_base ** (attempt - 1))
+
+        logger.error(
+            "All %d attempts of %s failed; re-raising the last exception.",
+            attempts, name,
+        )
+
+        raise last_exception
 
     return wrapper

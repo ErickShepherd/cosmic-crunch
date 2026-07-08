@@ -25,6 +25,7 @@ mirroring v1 behavior exactly. Turning that configuration into real flags
 import argparse
 import logging
 import re
+import sys
 
 # %% Local application imports.
 from cosmic_crunch import __version__
@@ -349,7 +350,16 @@ def main(argv : list = None) -> None:
 
     _configure_logging(getattr(args, "logfile", None))
 
-    args.func(args)
+    try:
+
+        args.func(args)
+
+    except fetch.NoDataFilesFoundError as error:
+
+        logging.getLogger("cosmic_crunch.cli").error(str(error))
+        print(f"error: {error}", file = sys.stderr)
+
+        raise SystemExit(1)
 
 
 # %% Console entry point.
