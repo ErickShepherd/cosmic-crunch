@@ -17,6 +17,7 @@ was edited.
 | `20190103_0000co1_g72_2p6.L2.txt.gz` | `cosmic1/postproc/y2019/2019-01-03/L2/txt/20190103_0000co1_g72_2p6.L2.txt.gz` | real | `COSMIC1-Profile` (68) + `NCEP_FNL-Profile` (83) | 20 (10×68, 10×83) | late-mission multi-DataType parse (different second type) |
 | `cosmic1_SYNTHETIC_empty-data.L2.txt.gz` | derived from the 2006 file above | **synthetic** | header declares 68 + 82 | 0 | the empty-data / `--skip_empty` path (`raw_data.empty`) |
 | `cosmic1_SYNTHETIC_multitype-differing-width.L2.txt.gz` | hand-authored | **synthetic** | `TypeWide` (68, 6 fields) + `TypeNarrow` (82, 3 fields) | 4 (2×68, 2×82) | the column-name loop-leak fix (item 10) — needs *differing* field counts, which no real file has |
+| `cosmic1_SYNTHETIC_malicious-header.L2.txt.gz` | hand-authored | **synthetic** | `TypeA` (68, 2 fields) | 2 | proves the `eval`→`literal_eval` fix (item 9): a header value `EvilValue = __import__('os').system(...)` must parse to an inert string, executing nothing (item 12 test) |
 
 ## Notes for downstream items
 

@@ -1,0 +1,75 @@
+'''fetch: fail-loud zero-results + atomic/resumable download tests (offline).'''
+
+from unittest import mock
+
+import pytest
+
+from cosmic_crunch import fetch
+
+
+URL = ("https://x/ftp/glevels/cosmic1/postproc/y2006/2006-05-01/"
+       "L2/txt/20060501_0632co1_g35_2p6.L2.txt.gz")
+
+
+def _response(chunks, content_length, boom=False):
+    r = mock.MagicMock()
+    r.__enter__.return_value = r
+    r.__exit__.return_value = False
+    r.raise_for_status.return_value = None
+    r.headers.get.return_value = content_length
+
+    def iter_content(chunk_size=None):
+        for c in chunks:
+            yield c
+        if boom:
+            raise IOError("connection dropped")
+
+    r.iter_content.side_effect = iter_content
+    return r
+
+
+def test_zero_result_crawl_raises(monkeypatch):
+    monkeypatch.setattr(fetch, "crawl_cosmic_urls", lambda: [])
+    monkeypatch.setattr(fetch, "parallelize", lambda *a, **k: [])
+    with pytest.raises(fetch.NoDataFilesFoundError):
+        fetch.crawl_site(processes=1)
+
+
+def test_download_is_atomic(tmp_path, monkeypatch):
+    monkeypatch.setattr(fetch, "SAVE_DIRECTORY", str(tmp_path))
+    payload = b"COSMIC" * 20
+    dst = tmp_path / "2006" / "2006-05-01" / "txt" / "20060501_0632co1_g35_2p6.L2.txt.gz"
+
+    with mock.patch.object(fetch.requests, "get",
+                           return_value=_response([payload], str(len(payload)))):
+        fetch._download_data_file(URL)
+
+    assert dst.read_bytes() == payload
+    assert not dst.with_suffix(dst.suffix + ".part").exists()
+
+
+def test_download_skips_when_size_matches(tmp_path, monkeypatch):
+    monkeypatch.setattr(fetch, "SAVE_DIRECTORY", str(tmp_path))
+    payload = b"COSMIC" * 20
+    with mock.patch.object(fetch.requests, "get",
+                           return_value=_response([payload], str(len(payload)))):
+        fetch._download_data_file(URL)
+
+    # second call with matching Content-Length must not re-download
+    resp = _response([b"DIFFERENT"], str(len(payload)))
+    with mock.patch.object(fetch.requests, "get", return_value=resp):
+        fetch._download_data_file(URL)
+    assert not resp.iter_content.called
+
+    dst = tmp_path / "2006" / "2006-05-01" / "txt" / "20060501_0632co1_g35_2p6.L2.txt.gz"
+    assert dst.read_bytes() == payload            # unchanged
+
+
+def test_interrupted_download_leaves_no_truncated_file(tmp_path, monkeypatch):
+    monkeypatch.setattr(fetch, "SAVE_DIRECTORY", str(tmp_path))
+    dst = tmp_path / "2006" / "2006-05-01" / "txt" / "20060501_0632co1_g35_2p6.L2.txt.gz"
+    with mock.patch.object(fetch.requests, "get",
+                           return_value=_response([b"partial"], "9999", boom=True)):
+        with pytest.raises(IOError):
+            fetch._download_data_file(URL)
+    assert not dst.exists()                        # never published a truncated file
