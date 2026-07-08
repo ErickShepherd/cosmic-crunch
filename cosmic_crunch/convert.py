@@ -151,24 +151,31 @@ def read_cosmic_ascii_file(filename : str) -> Tuple[dict, dict, bool]:
         data_types[dtype_name]["id"]     = dtype_id
         data_types[dtype_name]["fields"] = dtype_fields
         
+    # Read with generic, maximum-width column names. The v1 bug fixed the names
+    # to ``data_types[dtype_name]["fields"]`` where ``dtype_name`` was the LAST
+    # value left by the loop above, so every row was parsed with the last type's
+    # field list -- misaligning (or crashing on) types with a different field
+    # count. Reading at the max width and slicing per type below fixes the leak.
+    max_fields = max(len(dt["fields"]) for dt in data_types.values())
+
     raw_data = pd.read_csv(
         filename,
         sep       = "\t",
-        names     = ["Field", *data_types[dtype_name]["fields"]],
+        names     = ["Field", *[f"column_{i}" for i in range(max_fields)]],
         na_values = -9999.0,
         skiprows  = body_index
     )
-    
+
     file_is_empty = raw_data.empty
-    
+
     if file_is_empty:
-        
+
         logger.warning(f"The following file contains no data!: {filename}")
-        
+
         data = None
-    
+
     else:
-    
+
         data = {}
 
         for name in data_types.keys():
@@ -176,11 +183,17 @@ def read_cosmic_ascii_file(filename : str) -> Tuple[dict, dict, bool]:
             dtype_id     = data_types[name]["id"]
             dtype_fields = data_types[name]["fields"]
 
-            data[name] = raw_data[raw_data["Field"] == dtype_id]
-            data[name] = data[name].drop(["Field"], axis = 1)
-            data[name] = data[name].reset_index(drop = True)
-            data[name].columns = dtype_fields
-            data[name].index.name = "Index"
+            frame = raw_data[raw_data["Field"] == dtype_id]
+            frame = frame.drop(["Field"], axis = 1)
+            frame = frame.reset_index(drop = True)
+
+            # Rows of a narrower type carry trailing NaN filler columns from the
+            # max-width read; keep only this type's own columns before naming.
+            frame = frame.iloc[:, :len(dtype_fields)]
+            frame.columns    = list(dtype_fields)
+            frame.index.name = "Index"
+
+            data[name] = frame
     
     return header, data, file_is_empty
 
@@ -213,7 +226,13 @@ def write_cosmic_netcdf4_file(filename : str, header : dict, data : dict):
     
     save_filename = base_filename + ".nc"
     save_filename = re.sub(r"(?:\\|/)txt(?:\\|/)?", "/nc/", save_filename)
-    
+
+    # Ensure the output directory exists so single-file conversion works without
+    # relying on crawl_convert to have pre-created the nc/ directory. Where the
+    # txt->nc rewrite above produced no "/nc/" segment, this is the file's own
+    # (already-existing) directory, so it is a no-op.
+    os.makedirs(os.path.dirname(os.path.abspath(save_filename)), exist_ok = True)
+
     with nc.Dataset(save_filename, "w") as dataset:
         
         for key, value in header.items():
@@ -331,33 +350,36 @@ def crawl_convert(paths      : Iterable,
     
     '''
     
-    path = list(paths)
-    
-    for path in paths:
-    
-        path = os.path.abspath(path)
+    # Collect the data files across ALL input paths first, then convert once.
+    # v1 bugs fixed here: (1) `path = list(paths)` shadowed the loop variable
+    # (should rebind `paths`); (2) `data_paths` was reset each iteration and the
+    # `return` sat INSIDE the loop, so only the first path was ever processed.
+    paths      = list(paths)
+    data_paths = []
 
-        data_paths = []
+    for path in paths:
+
+        path = os.path.abspath(path)
 
         if not os.path.isfile(path):
 
             for root, directories, files in os.walk(path):
-                
+
                 for directory in directories:
-                    
+
                     dir_path = os.path.join(root, directory)
-                    
+
                     if re.search(r"(?:\\|/)txt(?:\\|/)?", dir_path):
-                        
+
                         nc_dir_path = re.sub(
                             r"(?:\\|/)txt(?:\\|/)?",
                             "/nc",
                             dir_path
                         )
-                    
-                        if not os.path.exists(nc_dir_path):
-                        
-                            os.mkdir(nc_dir_path)
+
+                        # exist_ok replaces the v1 exists-check + os.mkdir, which
+                        # raced and could not create intermediate directories.
+                        os.makedirs(nc_dir_path, exist_ok = True)
 
                 for file in files:
 
@@ -368,13 +390,13 @@ def crawl_convert(paths      : Iterable,
         else:
 
             data_paths.append(path)
-                
-        completion_codes = parallelize(
-            partial(convert_cosmic_file, skip_empty = skip_empty),
-            data_paths,
-            "Converting ASCII to netCDF4",
-            processes,
-        )
-        
-        return completion_codes
+
+    completion_codes = parallelize(
+        partial(convert_cosmic_file, skip_empty = skip_empty),
+        data_paths,
+        "Converting ASCII to netCDF4",
+        processes,
+    )
+
+    return completion_codes
 
