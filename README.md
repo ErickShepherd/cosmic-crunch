@@ -11,6 +11,20 @@ them to **netCDF4**.
 archive, downloads the Level-2 ASCII occultation profiles, and (optionally)
 converts them into self-describing netCDF4 files.
 
+## Problems this solves
+
+Reach for this if you are trying to:
+
+- **Bulk-download COSMIC-1 (FORMOSAT-3) GNSS radio-occultation data** from the
+  JPL GENESIS archive without hand-writing a crawler.
+- **Convert COSMIC / GENESIS Level-2 ASCII occultation profiles to netCDF4** —
+  the profile's fields (temperature, pressure, refractivity, water vapour, …)
+  as a self-describing, xarray-friendly file.
+- **Resume an interrupted bulk pull** — downloads are atomic and skip files
+  already present, so you can just re-run.
+- **Download only the slice you need** — filter by instrument, year, or date
+  (year and date by regex) instead of pulling the whole archive.
+
 > **Site restructure note (2020 → 2026).** JPL restructured the GENESIS site: the
 > old crawl root (`/ftp/pub/genesis/glevels`) is dead, so v1 of this tool silently
 > "succeeded" while downloading nothing. v2 targets the current root

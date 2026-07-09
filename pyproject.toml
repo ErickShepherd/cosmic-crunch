@@ -5,15 +5,31 @@ build-backend = "hatchling.build"
 [project]
 name = "cosmic-crunch"
 dynamic = ["version"]
-description = "Download JPL GENESIS COSMIC radio-occultation ASCII files and convert them to netCDF4."
+description = "Bulk-download JPL GENESIS COSMIC-1 (FORMOSAT-3) GNSS radio-occultation ASCII profiles and convert them to netCDF4."
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [
     { name = "Erick Shepherd", email = "dev@erickshepherd.com" },
 ]
-keywords = ["COSMIC", "GENESIS", "JPL", "radio occultation", "netCDF4"]
+keywords = [
+    "COSMIC", "COSMIC-1", "FORMOSAT-3", "GENESIS", "JPL",
+    "radio occultation", "GNSS", "GPS", "atmospheric profiles",
+    "atmospheric science", "occultation", "netCDF", "netCDF4",
+]
 license = "MIT"
 license-files = ["LICENSE"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Atmospheric Science",
+    "Topic :: Scientific/Engineering :: GIS",
+]
 dependencies = [
     # Floors track the versions the test matrix passes against;
     # requests/pandas floors are pinned by the design, netCDF4/tqdm are starting
@@ -32,6 +48,8 @@ cosmic-crunch = "cosmic_crunch.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/ErickShepherd/cosmic-crunch"
+Source = "https://github.com/ErickShepherd/cosmic-crunch"
+"Bug Tracker" = "https://github.com/ErickShepherd/cosmic-crunch/issues"
 
 [tool.hatch.version]
 path = "cosmic_crunch/__init__.py"
