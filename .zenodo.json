@@ -1,0 +1,24 @@
+{
+  "upload_type": "software",
+  "title": "cosmic-crunch: Download JPL GENESIS COSMIC-1 GNSS radio-occultation profiles and convert them to netCDF4",
+  "description": "A Python command-line tool that bulk-downloads JPL GENESIS COSMIC-1 (FORMOSAT-3) GNSS radio-occultation Level-2 ASCII profiles and converts them to self-describing netCDF4, with atomic, resumable downloads and filtering by instrument, year, and date (year and date by regex).",
+  "access_right": "open",
+  "license": "MIT",
+  "keywords": [
+    "COSMIC",
+    "FORMOSAT-3",
+    "radio occultation",
+    "GNSS",
+    "JPL",
+    "GENESIS",
+    "netCDF4",
+    "atmospheric science",
+    "Python"
+  ],
+  "creators": [
+    {
+      "name": "Shepherd, Erick Edward",
+      "orcid": "0000-0002-4750-6100"
+    }
+  ]
+}
