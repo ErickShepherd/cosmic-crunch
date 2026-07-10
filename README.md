@@ -3,7 +3,7 @@
 [![CI](https://github.com/ErickShepherd/cosmic-crunch/actions/workflows/ci.yml/badge.svg)](https://github.com/ErickShepherd/cosmic-crunch/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/ErickShepherd/cosmic-crunch/blob/main/LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://github.com/ErickShepherd/cosmic-crunch/blob/main/pyproject.toml)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21288805.svg)](https://doi.org/10.5281/zenodo.21288805)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21288805-blue)](https://doi.org/10.5281/zenodo.21288805)
 
 Download JPL GENESIS **COSMIC** radio-occultation ASCII data files and convert
 them to **netCDF4**.
