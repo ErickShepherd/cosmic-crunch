@@ -12,6 +12,7 @@ authors:
     orcid: "https://orcid.org/0000-0002-4750-6100"
 version: "2.1.0"
 date-released: "2026-07-10"
+doi: "10.5281/zenodo.21288805"
 license: MIT
 repository-code: "https://github.com/ErickShepherd/cosmic-crunch"
 url: "https://github.com/ErickShepherd/cosmic-crunch"
