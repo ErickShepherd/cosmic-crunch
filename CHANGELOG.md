@@ -4,7 +4,7 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.1.0] — 2026-07-10
 
 ### Added
 - Optional lossless zlib compression of netCDF4 output: `--compress` and
@@ -14,6 +14,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   variables, so HDF5's per-variable overhead makes compression inflate short
   profiles and only pay off for long ones (crossover ≈ 1000 levels). See the
   README "Compression" section.
+- `.zenodo.json` and an author ORCID in `CITATION.cff`, so a Zenodo release
+  archive registers a citable DOI with correct software metadata.
 
 ## [2.0.2] — 2026-07-09
 
@@ -102,6 +104,7 @@ The original two-script tool (unpackaged, AGPL-3.0, never published to PyPI):
 - `convert_files.py` (v1.3.3) — convert COSMIC ASCII files to netCDF4. Created
   2021-01-28, last updated 2021-08-02.
 
+[2.1.0]: https://github.com/ErickShepherd/cosmic-crunch/releases/tag/v2.1.0
 [2.0.2]: https://github.com/ErickShepherd/cosmic-crunch/releases/tag/v2.0.2
 [2.0.1]: https://github.com/ErickShepherd/cosmic-crunch/releases/tag/v2.0.1
 [2.0.0]: https://github.com/ErickShepherd/cosmic-crunch/releases/tag/v2.0.0
