@@ -248,7 +248,17 @@ def write_cosmic_netcdf4_file(filename  : str,
         base_filename = os.path.splitext(base_filename)[0]
     
     save_filename = base_filename + ".nc"
-    save_filename = re.sub(r"(?:\\|/)txt(?:\\|/)?", "/nc/", save_filename)
+
+    # Mirror .../txt/<file> into a sibling .../nc/<file> ONLY when the file's
+    # immediate parent directory is named exactly "txt". A substring rewrite
+    # would also fire on segments merely *starting* with txt anywhere in the
+    # absolute path (e.g. /home/user/txt_originals/...), silently relocating
+    # output into a mangled tree.
+    directory, leaf = os.path.split(save_filename)
+
+    if os.path.basename(directory) == "txt":
+
+        save_filename = os.path.join(os.path.dirname(directory), "nc", leaf)
 
     # Ensure the output directory exists so single-file conversion works without
     # relying on crawl_convert to have pre-created the nc/ directory. Where the
@@ -329,7 +339,7 @@ def convert_cosmic_file(filename   : str,
             if skip_empty:
         
                 logger.warning(
-                    "The empty following empty file was skipped during "
+                    "The following empty file was skipped during "
                     f"the conversion: {filename}"
                 )
             
@@ -416,19 +426,14 @@ def crawl_convert(paths      : Iterable,
 
                 for directory in directories:
 
-                    dir_path = os.path.join(root, directory)
-
-                    if re.search(r"(?:\\|/)txt(?:\\|/)?", dir_path):
-
-                        nc_dir_path = re.sub(
-                            r"(?:\\|/)txt(?:\\|/)?",
-                            "/nc",
-                            dir_path
-                        )
+                    # Pre-create the nc/ sibling of each directory named
+                    # exactly "txt" (a substring match would also fire on
+                    # e.g. txt_originals/ and create a stray tree).
+                    if directory == "txt":
 
                         # exist_ok replaces the v1 exists-check + os.mkdir, which
                         # raced and could not create intermediate directories.
-                        os.makedirs(nc_dir_path, exist_ok = True)
+                        os.makedirs(os.path.join(root, "nc"), exist_ok = True)
 
                 for file in files:
 

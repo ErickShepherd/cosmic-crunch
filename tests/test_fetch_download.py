@@ -110,3 +110,11 @@ def test_interrupted_download_leaves_no_truncated_file(tmp_path, monkeypatch):
         with pytest.raises(IOError):
             fetch._download_data_file(URL)
     assert not dst.exists()                        # never published a truncated file
+
+
+def test_nonconforming_url_raises_descriptive_error(tmp_path, monkeypatch):
+    # A mirror URL outside the .../y<YYYY>/<date>/[L2/]txt/... layout used to
+    # surface as an opaque, retried TypeError on the regex match result.
+    monkeypatch.setattr(fetch, "SAVE_DIRECTORY", str(tmp_path))
+    with pytest.raises(ValueError, match="archive layout"):
+        fetch._download_data_file("https://mirror.example/files/data.txt.gz")

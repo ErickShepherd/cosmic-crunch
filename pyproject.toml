@@ -13,7 +13,7 @@ authors = [
 ]
 keywords = [
     "COSMIC", "COSMIC-1", "FORMOSAT-3", "GENESIS", "JPL",
-    "radio occultation", "GNSS", "GPS", "atmospheric profiles",
+    "radio occultation", "RO", "GNSS-RO", "GNSS", "GPS", "atmospheric profiles",
     "atmospheric science", "occultation", "netCDF", "netCDF4",
 ]
 license = "MIT"

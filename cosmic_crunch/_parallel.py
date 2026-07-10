@@ -82,7 +82,7 @@ def parallelize(
     :param total: The total number of iterations expected.
     :type total: int
 
-    :return: A list of collected return values from the paralleized function.
+    :return: A list of collected return values from the parallelized function.
     :rtype: list
 
     '''
@@ -98,7 +98,7 @@ def parallelize(
         # Instantiates the multiprocessing pool.
         with multiprocessing.Pool(processes) as pool:
 
-            # Deterines whether or not to wrap the Pool.imap with a tqdm
+            # Determines whether or not to wrap the Pool.imap with a tqdm
             # progress bar.
             if verbose:
 
@@ -116,7 +116,7 @@ def parallelize(
 
         results = []
 
-        # Deterines whether or not to wrap the domain with a tqdm progress bar.
+        # Determines whether or not to wrap the domain with a tqdm progress bar.
         if verbose:
 
             for element in tqdm(domain, total = total, desc = desc):

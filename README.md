@@ -16,7 +16,7 @@ converts them into self-describing netCDF4 files.
 
 Reach for this if you are trying to:
 
-- **Bulk-download COSMIC-1 (FORMOSAT-3) GNSS radio-occultation data** from the
+- **Bulk-download COSMIC-1 (FORMOSAT-3) GNSS radio-occultation (RO) data** from the
   JPL GENESIS archive without hand-writing a crawler.
 - **Convert COSMIC / GENESIS Level-2 ASCII occultation profiles to netCDF4** —
   the profile's fields (temperature, pressure, refractivity, water vapour, …)
@@ -35,7 +35,9 @@ Reach for this if you are trying to:
 > **Mission status.** COSMIC-1 (FORMOSAT-3, flight modules FM1–FM6, served here as
 > `cosmic1/`–`cosmic6/`) was decommissioned in 2020, so this is a **static
 > archive** — the data has stopped changing. (COSMIC-2 is a different mission on a
-> different archive and is out of scope.)
+> different archive and is out of scope.) The COSMIC program's primary archive is
+> UCAR's CDAAC; this tool crawls **JPL's independent GENESIS processing** of
+> COSMIC-1, which is a separate archive with its own ASCII format.
 
 ## Installation
 
@@ -61,10 +63,11 @@ cosmic-crunch convert  # convert downloaded ASCII files to netCDF4
 ### `cosmic-crunch get`
 
 ```
-usage: cosmic-crunch get [-h] [--base-url BASE_URL] [--instrument INSTRUMENT]
-                         [--year_regex YEAR_REGEX] [--date_regex DATE_REGEX]
-                         [--processes PROCESSES] [--test] [--netcdf4]
-                         [--skip_empty] [--compress] [--complevel COMPLEVEL]
+usage: cosmic-crunch get [-h] [--base-url BASE_URL] [--logfile LOGFILE]
+                         [--instrument INSTRUMENT] [--year_regex YEAR_REGEX]
+                         [--date_regex DATE_REGEX] [--processes PROCESSES]
+                         [--test] [--netcdf4] [--skip_empty] [--compress]
+                         [--complevel COMPLEVEL]
 ```
 
 | flag | description |
@@ -119,6 +122,35 @@ directory (mirroring the `txt/` layout), or beside the source file otherwise.
 
 ```bash
 cosmic-crunch convert ./jpl_cosmic/2006/ --skip_empty --processes=4
+```
+
+### Use from Python
+
+The conversion machinery is importable as a library:
+
+```python
+from cosmic_crunch import convert
+
+# Convert a directory tree (or a single file) of ASCII profiles:
+convert.crawl_convert(["./jpl_cosmic/2006/"], processes=4)
+
+# Or parse one ASCII file directly into a header dict and a dict of
+# pandas DataFrames (one per profile):
+header, data, is_empty = convert.read_cosmic_ascii_file(
+    "20060501_0632co1_g35_2p6.L2.txt.gz"
+)
+```
+
+The netCDF4 output nests each profile in a **group** (see the structure
+below), so name the group when reading it back — a bare
+`xarray.open_dataset(path)` shows only the global attributes:
+
+```python
+import xarray as xr
+
+profile = xr.open_dataset(
+    "20060501_0632co1_g35_2p6.L2.nc", group="COSMIC1-Profile"
+)
 ```
 
 ### Compression
