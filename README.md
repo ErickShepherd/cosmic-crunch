@@ -174,4 +174,4 @@ ruff check .
 
 ## License
 
-MIT — see [LICENSE](https://github.com/ErickShepherd/cosmic-crunch/blob/main/LICENSE).
+MIT — see [LICENSE](https://github.com/ErickShepherd/cosmic-crunch/blob/main/LICENSE). Built by [Erick Shepherd](https://erickshepherd.com).
