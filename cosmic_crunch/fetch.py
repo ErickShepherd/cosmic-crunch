@@ -13,12 +13,14 @@ and versioned via ``cosmic_crunch.__version__``.
 '''
 
 # %% Standard library imports.
+import functools
 import logging
 import os
 import re
-from typing import Callable
 from typing import Dict
 from typing import List
+from typing import Optional
+from typing import Pattern
 
 # %% Third party imports.
 import requests
@@ -44,7 +46,7 @@ FORMAT_URL_REGEX = r"<a href=\"(?P<url>\w+/)\""
 # fields, not re-validate the instrument.
 FILENAME_REGEX   = (r".*(?:\\|/)+[^\\/]+(?:\\|/)+postproc(?:\\|/)+"
                     r"y(?P<year>\d{4})(?:\\|/)+(?P<dtg>\d{4}-\d{2}-\d{2})"
-                    r"(?:\\|/)+(?:L2)*(?:\\|/)+(?P<filetype>txt)(?:\\|/)+"
+                    r"(?:\\|/)+(?:L2)?(?:\\|/)+(?P<filetype>txt)(?:\\|/)+"
                     r"(?P<filename>.*)")
 URL_REGEX        = re.compile(URL_REGEX,        re.MULTILINE)
 YEAR_URL_REGEX   = re.compile(YEAR_URL_REGEX,   re.MULTILINE)
@@ -67,6 +69,12 @@ SAVE_DIRECTORY   = os.path.abspath("./jpl_cosmic")
 CHUNK_SIZE       = 2 ** 13
 PROCESSES        = 1
 FILES_TO_GET     = None
+# (connect, read) timeout passed to every requests.get. requests has NO
+# default timeout, so without this a black-holed connection blocks a worker
+# forever -- and the bounded-retry wrapper never fires because no exception
+# is raised. The read timeout applies per-chunk on streamed downloads, so
+# large files are unaffected.
+REQUEST_TIMEOUT  = (10, 60)
 
 
 # %% Exception definitions.
@@ -93,7 +101,7 @@ def _crawl_cosmic_urls() -> List[str]:
 
     '''
 
-    with requests.get(BASE_URL) as request:
+    with requests.get(BASE_URL, timeout = REQUEST_TIMEOUT) as request:
 
         request.raise_for_status()
 
@@ -110,76 +118,92 @@ def _crawl_cosmic_urls() -> List[str]:
 
 
 # %% Function definition: crawl_cosmic_urls
-def crawl_cosmic_urls(*args : List, **kwargs : Dict) -> Callable:
+def crawl_cosmic_urls(*args : List, **kwargs : Dict) -> List[str]:
     '''
 
     Retry-wrapped, pickleable wrapper around :func:`_crawl_cosmic_urls`
     (safe to use as a ``multiprocessing`` worker).
 
     '''
-    
+
     return retry_decorator(_crawl_cosmic_urls)(*args, **kwargs)
 
 
 # %% Function definition: _crawl_year_urls
-def _crawl_year_urls(cosmic_url : str) -> List[str]:
+def _crawl_year_urls(cosmic_url     : str,
+                     year_url_regex : Optional[Pattern] = None) -> List[str]:
     '''
 
     Given an instrument ``postproc`` URL, return the URL of each of its year
     (``y<YYYY>/``) directories.
 
+    The regex is a PARAMETER (defaulting to the module constant) rather than a
+    module-global read so that a CLI-customized filter travels with the worker
+    callable into ``multiprocessing`` pools under every start method: under
+    ``spawn``/``forkserver`` (macOS/Windows default; Linux default from Python
+    3.14) workers re-import this module fresh, so a rebound module global would
+    be silently lost and the crawl would match everything.
+
     '''
-             
-    with requests.get(cosmic_url) as request:
+
+    regex = YEAR_URL_REGEX if year_url_regex is None else year_url_regex
+
+    with requests.get(cosmic_url, timeout = REQUEST_TIMEOUT) as request:
 
         request.raise_for_status()
 
         content   = request.content.decode()
-        year_urls = YEAR_URL_REGEX.findall(content)
+        year_urls = regex.findall(content)
         year_urls = [cosmic_url.rstrip("/") + "/" + year for year in year_urls]
 
     return year_urls
 
 
 # %% Function definition: crawl_year_urls
-def crawl_year_urls(*args : List, **kwargs : Dict) -> Callable:
+def crawl_year_urls(*args : List, **kwargs : Dict) -> List[str]:
     '''
 
     Retry-wrapped, pickleable wrapper around :func:`_crawl_year_urls`.
 
     '''
-    
+
     return retry_decorator(_crawl_year_urls)(*args, **kwargs)
 
 
 # %% Function definition: _crawl_date_urls
-def _crawl_date_urls(year_url : str) -> List[str]:
+def _crawl_date_urls(year_url       : str,
+                     date_url_regex : Optional[Pattern] = None) -> List[str]:
     '''
 
     Given a year-directory URL, return the URL of each of its date
     (``YYYY-MM-DD/``) directories.
 
+    The regex is a parameter for the same spawn-safety reason as
+    :func:`_crawl_year_urls`.
+
     '''
-    
-    with requests.get(year_url) as request:
+
+    regex = DATE_URL_REGEX if date_url_regex is None else date_url_regex
+
+    with requests.get(year_url, timeout = REQUEST_TIMEOUT) as request:
 
         request.raise_for_status()
 
         content   = request.content.decode()
-        date_urls = DATE_URL_REGEX.findall(content)
+        date_urls = regex.findall(content)
         date_urls = [year_url.rstrip("/") + "/" + date for date in date_urls]
 
     return date_urls
 
 
 # %% Function definition: crawl_date_urls
-def crawl_date_urls(*args : List, **kwargs : Dict) -> Callable:
+def crawl_date_urls(*args : List, **kwargs : Dict) -> List[str]:
     '''
 
     Retry-wrapped, pickleable wrapper around :func:`_crawl_date_urls`.
 
     '''
-    
+
     return retry_decorator(_crawl_date_urls)(*args, **kwargs)
           
 
@@ -192,7 +216,7 @@ def _crawl_format_urls(date_url : str) -> List[str]:
 
     '''
     
-    with requests.get(date_url) as request:
+    with requests.get(date_url, timeout = REQUEST_TIMEOUT) as request:
 
         request.raise_for_status()
 
@@ -203,7 +227,7 @@ def _crawl_format_urls(date_url : str) -> List[str]:
 
             date_url += "/" + DATA_LEVEL
 
-    with requests.get(date_url) as request:
+    with requests.get(date_url, timeout = REQUEST_TIMEOUT) as request:
 
         request.raise_for_status()
 
@@ -215,7 +239,7 @@ def _crawl_format_urls(date_url : str) -> List[str]:
 
 
 # %% Function definition: crawl_format_urls
-def crawl_format_urls(*args : List, **kwargs : Dict) -> Callable:
+def crawl_format_urls(*args : List, **kwargs : Dict) -> List[str]:
     '''
 
     Retry-wrapped, pickleable wrapper around :func:`_crawl_format_urls`.
@@ -234,7 +258,7 @@ def _crawl_data_urls(format_url : str) -> List[str]:
 
     '''
         
-    with requests.get(format_url) as request:
+    with requests.get(format_url, timeout = REQUEST_TIMEOUT) as request:
 
         request.raise_for_status()
 
@@ -246,7 +270,7 @@ def _crawl_data_urls(format_url : str) -> List[str]:
 
 
 # %% Function definition: crawl_data_urls
-def crawl_data_urls(*args : List, **kwargs : Dict) -> Callable:
+def crawl_data_urls(*args : List, **kwargs : Dict) -> List[str]:
     '''
 
     Retry-wrapped, pickleable wrapper around :func:`_crawl_data_urls`.
@@ -277,6 +301,16 @@ def _download_data_file(source_url : str) -> None:
     logger = logging.getLogger("cosmic_crunch.fetch")
 
     metadata = FILENAME_REGEX.match(source_url)
+
+    # A URL that does not follow the expected .../y<YYYY>/<date>/[L2/]txt/...
+    # layout (plausible with --base-url mirrors) would otherwise surface as an
+    # opaque, retried TypeError on the subscript below.
+    if metadata is None:
+
+        raise ValueError(
+            f"URL does not match the expected COSMIC archive layout "
+            f"(.../y<YYYY>/<YYYY-MM-DD>/[L2/]txt/<file>): {source_url!r}"
+        )
 
     year     = metadata["year"]
     dtg      = metadata["dtg"]
@@ -312,7 +346,8 @@ def _download_data_file(source_url : str) -> None:
 
     part_path = dst_path + ".part"
 
-    with requests.get(source_url, stream = True) as request:
+    with requests.get(source_url, stream = True,
+                      timeout = REQUEST_TIMEOUT) as request:
 
         request.raise_for_status()
 
@@ -340,7 +375,7 @@ def _download_data_file(source_url : str) -> None:
 
 
 # %% Function definition: download_data_file
-def download_data_file(*args : List, **kwargs : Dict) -> Callable:
+def download_data_file(*args : List, **kwargs : Dict) -> None:
     '''
 
     Retry-wrapped, pickleable wrapper around :func:`_download_data_file`.
@@ -351,25 +386,34 @@ def download_data_file(*args : List, **kwargs : Dict) -> Callable:
     
 
 # %% Function definition: crawl_site
-def crawl_site(processes : int = PROCESSES) -> List[str]:
+def crawl_site(processes      : int = PROCESSES,
+               year_url_regex : Optional[Pattern] = None,
+               date_url_regex : Optional[Pattern] = None) -> List[str]:
     '''
 
     Crawl the full instrument tree (root -> postproc -> year -> date -> L2 ->
     format) and return the URL of every ``.txt.gz`` data file found. Raises
     :class:`NoDataFilesFoundError` if the crawl finds nothing.
 
+    Custom year/date filters are threaded to the pool workers as bound
+    arguments (``functools.partial``), never as rebound module globals, so
+    they survive every ``multiprocessing`` start method (compiled patterns
+    pickle cleanly).
+
     '''
-    
+
     cosmic_urls = crawl_cosmic_urls()
-    
+
     year_desc = "Crawling all ./cosmic<#>/postproc"
     year_urls = flatten(parallelize(
-        crawl_year_urls, cosmic_urls, year_desc, processes
+        functools.partial(crawl_year_urls, year_url_regex = year_url_regex),
+        cosmic_urls, year_desc, processes
     ))
-    
+
     date_desc = "Crawling all ./cosmic<#>/.../<year>"
     date_urls = flatten(parallelize(
-        crawl_date_urls, year_urls, date_desc, processes
+        functools.partial(crawl_date_urls, date_url_regex = date_url_regex),
+        year_urls, date_desc, processes
     ))
     
     format_desc = "Crawling all ./cosmic<#>/.../<date>"

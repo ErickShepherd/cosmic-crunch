@@ -14,10 +14,13 @@ This module owns ALL logging configuration (plan item 5): logging is configured
 here in ``main()`` at run time, never at import time -- importing any
 ``cosmic_crunch`` submodule no longer creates a stray log file in the CWD.
 
-NOTE: the ``get`` handler configures the crawler by rebinding module globals on
-``cosmic_crunch.fetch`` (BASE_URL, INSTRUMENT, the year/date regexes) from the
-parsed flags -- a deliberate v1-shaped mechanism kept so the multiprocessing
-``__mp_main__`` re-import sees the same configuration.
+NOTE: the ``get`` handler rebinds only the fetch globals that are read in the
+PARENT process (BASE_URL, INSTRUMENT -- consumed by ``crawl_cosmic_urls``
+before the pool starts). The year/date filters are compiled here and passed
+through :func:`fetch.crawl_site` as worker arguments instead: a rebound module
+global would be silently lost by the ``spawn``/``forkserver`` start methods
+(macOS/Windows default; Linux default from Python 3.14), whose workers
+re-import ``fetch`` fresh with the match-everything defaults.
 
 '''
 
@@ -86,6 +89,58 @@ def _complevel(value : str) -> int:
     return level
 
 
+# %% Function definition: _year_href_regex
+def _year_href_regex(year_pattern : str) -> "re.Pattern":
+
+    '''
+
+    Compiles the href-matching regex for a user-supplied year pattern. The
+    user pattern is wrapped in a non-capturing group so alternation works:
+    unwrapped, ``2006|2007`` would splice to ``y2006|2007/`` -- which matches
+    neither ``y2006/`` nor ``y2007/`` in a listing.
+
+    '''
+
+    return re.compile(
+        r"<a href=\"(?P<url>y(?:" + year_pattern + r")/)\"", re.MULTILINE
+    )
+
+
+# %% Function definition: _date_href_regex
+def _date_href_regex(date_pattern : str) -> "re.Pattern":
+
+    '''
+
+    Compiles the href-matching regex for a user-supplied date pattern; wrapped
+    in a non-capturing group for the same alternation reason as
+    :func:`_year_href_regex`.
+
+    '''
+
+    return re.compile(
+        r"<a href=\"(?P<url>(?:" + date_pattern + r")/)\"", re.MULTILINE
+    )
+
+
+# %% Function definition: _conversion_exit_code
+def _conversion_exit_code(completion_codes : list) -> int:
+
+    '''
+
+    Maps a conversion tally to a process exit code: non-zero when nothing was
+    found to convert or any file errored. The v2 fail-loud spine covered only
+    ``get``; a conversion run that converted nothing must not exit 0 either
+    (it silently breaks ``cosmic-crunch convert dir/ && next-step`` pipelines).
+
+    '''
+
+    if not completion_codes or 2 in completion_codes:
+
+        return 1
+
+    return 0
+
+
 # %% Function definition: _print_conversion_summary
 def _print_conversion_summary(completion_codes : list) -> None:
 
@@ -111,12 +166,13 @@ def _print_conversion_summary(completion_codes : list) -> None:
 
 
 # %% Function definition: run_get
-def run_get(args : argparse.Namespace) -> None:
+def run_get(args : argparse.Namespace) -> int:
 
     '''
 
     Handler for ``cosmic-crunch get``: crawl the site, download the ASCII data
-    files, and optionally convert them to netCDF4.
+    files, and optionally convert them to netCDF4. Returns a process exit
+    code (0 on success).
 
     Ported from ``get_files.py``'s ``__main__`` block. The v1 ``FILES_TO_GET``
     default of ``-1`` silently dropped the last crawled URL on every run; v2
@@ -125,44 +181,43 @@ def run_get(args : argparse.Namespace) -> None:
 
     '''
 
-    # Resolve configuration onto the fetch module globals. Precedence for the
-    # base URL is: --base-url flag > COSMIC_CRUNCH_BASE_URL env (already applied
-    # as fetch.BASE_URL's default at import) > built-in default.
+    # Resolve the parent-read configuration onto the fetch module globals.
+    # Precedence for the base URL is: --base-url flag > COSMIC_CRUNCH_BASE_URL
+    # env (already applied as fetch.BASE_URL's default at import) > built-in
+    # default.
     if args.base_url is not None:
 
         fetch.BASE_URL = args.base_url
 
     fetch.INSTRUMENT = args.instrument
 
+    # The year/date filters are threaded through crawl_site as worker
+    # arguments (never module globals) so they survive spawn/forkserver
+    # pools -- see the module docstring.
+    year_url_regex = None
+    date_url_regex = None
+
     if args.year_regex is not None:
 
-        fetch.YEAR_URL_REGEX = re.compile(
-            r"<a href=\"(?P<url>y" + args.year_regex + r"/)\"", re.MULTILINE
-        )
+        year_url_regex = _year_href_regex(args.year_regex)
 
     if args.date_regex is not None:
 
-        fetch.DATE_URL_REGEX = re.compile(
-            r"<a href=\"(?P<url>" + args.date_regex + r"/)\"", re.MULTILINE
-        )
+        date_url_regex = _date_href_regex(args.date_regex)
 
     files_to_get = fetch.FILES_TO_GET
 
     if args.test_run:
 
-        year_regex = args.year_regex if args.year_regex is not None else "2019"
-        date_regex = args.date_regex if args.date_regex is not None else "2019-01-03"
+        year_url_regex = _year_href_regex(args.year_regex or "2019")
+        date_url_regex = _date_href_regex(args.date_regex or "2019-01-03")
 
-        fetch.YEAR_URL_REGEX = re.compile(
-            r"<a href=\"(?P<url>y" + year_regex + r"/)\"", re.MULTILINE
-        )
-        fetch.DATE_URL_REGEX = re.compile(
-            r"<a href=\"(?P<url>" + date_regex + r"/)\"", re.MULTILINE
-        )
-        fetch.INSTRUMENT   = "cosmic1"
-        files_to_get       = 10
+        fetch.INSTRUMENT = "cosmic1"
+        files_to_get     = 10
 
-    data_urls = fetch.crawl_site(args.processes)[:files_to_get]
+    data_urls = fetch.crawl_site(
+        args.processes, year_url_regex, date_url_regex
+    )[:files_to_get]
 
     parallelize(
         fetch.download_data_file,
@@ -183,14 +238,19 @@ def run_get(args : argparse.Namespace) -> None:
 
         _print_conversion_summary(completion_codes)
 
+        return _conversion_exit_code(completion_codes)
+
+    return 0
+
 
 # %% Function definition: run_convert
-def run_convert(args : argparse.Namespace) -> None:
+def run_convert(args : argparse.Namespace) -> int:
 
     '''
 
     Handler for ``cosmic-crunch convert``: convert one or more ASCII data files
     or directories of them to netCDF4. Ported from ``convert_files.py``.
+    Returns a process exit code (0 on success).
 
     '''
 
@@ -203,6 +263,16 @@ def run_convert(args : argparse.Namespace) -> None:
     )
 
     _print_conversion_summary(completion_codes)
+
+    if not completion_codes:
+
+        print(
+            "error: no convertible .txt/.txt.gz files found under the given "
+            "path(s)",
+            file = sys.stderr,
+        )
+
+    return _conversion_exit_code(completion_codes)
 
 
 # %% Function definition: build_parser
@@ -247,6 +317,16 @@ def build_parser() -> argparse.ArgumentParser:
             "Override the crawl root URL. Precedence: this flag > the "
             "COSMIC_CRUNCH_BASE_URL environment variable > the built-in "
             f"default ({fetch.BASE_URL})."
+        ),
+    )
+
+    get_parser.add_argument(
+        "--logfile",
+        type    = str,
+        default = None,
+        help    = (
+            "A custom name to use for the log file. Overrides the default "
+            f"\"{DEFAULT_LOG_FILENAME}\"."
         ),
     )
 
@@ -438,7 +518,7 @@ def main(argv : list = None) -> None:
 
     try:
 
-        args.func(args)
+        exit_code = args.func(args)
 
     except fetch.NoDataFilesFoundError as error:
 
@@ -446,6 +526,10 @@ def main(argv : list = None) -> None:
         print(f"error: {error}", file = sys.stderr)
 
         raise SystemExit(1)
+
+    if exit_code:
+
+        raise SystemExit(exit_code)
 
 
 # %% Console entry point.
