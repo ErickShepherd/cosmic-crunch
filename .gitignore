@@ -17,3 +17,6 @@ jpl_cosmic/
 # Local virtualenvs
 .venv/
 venv/
+
+# Sphinx documentation build output
+docs/_build/
