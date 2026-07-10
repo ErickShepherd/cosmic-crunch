@@ -48,6 +48,7 @@ cosmic-crunch = "cosmic_crunch.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/ErickShepherd/cosmic-crunch"
+Documentation = "https://cosmic-crunch.readthedocs.io/en/latest/"
 Source = "https://github.com/ErickShepherd/cosmic-crunch"
 "Bug Tracker" = "https://github.com/ErickShepherd/cosmic-crunch/issues"
 
