@@ -4,6 +4,17 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Optional lossless zlib compression of netCDF4 output: `--compress` and
+  `--complevel` CLI flags (on `get` and `convert`), and `compress`/`complevel`
+  parameters on `crawl_convert`, `convert_cosmic_file`, and
+  `write_cosmic_netcdf4_file`. Off by default — a COSMIC file is many small
+  variables, so HDF5's per-variable overhead makes compression inflate short
+  profiles and only pay off for long ones (crossover ≈ 1000 levels). See the
+  README "Compression" section.
+
 ## [2.0.2] — 2026-07-09
 
 Docs/packaging only — no code changes.

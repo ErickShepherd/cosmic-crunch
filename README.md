@@ -63,7 +63,7 @@ cosmic-crunch convert  # convert downloaded ASCII files to netCDF4
 usage: cosmic-crunch get [-h] [--base-url BASE_URL] [--instrument INSTRUMENT]
                          [--year_regex YEAR_REGEX] [--date_regex DATE_REGEX]
                          [--processes PROCESSES] [--test] [--netcdf4]
-                         [--skip_empty]
+                         [--skip_empty] [--compress] [--complevel COMPLEVEL]
 ```
 
 | flag | description |
@@ -76,6 +76,8 @@ usage: cosmic-crunch get [-h] [--base-url BASE_URL] [--instrument INSTRUMENT]
 | `--test` | Download a small subset (cosmic1, 2019-01-03, 10 files) as a smoke test. |
 | `--netcdf4` | Convert the downloaded ASCII files to netCDF4 afterward. |
 | `--skip_empty` | Skip converting files whose data arrays are all empty. |
+| `--compress` | Losslessly zlib-compress the netCDF4 output (off by default — see [Compression](#compression)). |
+| `--complevel` | zlib level `1`–`9` (default `7`); applies only with `--compress`. |
 
 Downloads are **atomic and resumable**: each file is streamed to a `.part`
 temporary and renamed into place only once complete, and files already present
@@ -106,7 +108,7 @@ Downloaded files are written under `./jpl_cosmic/<year>/<date>/txt/`.
 
 ```
 usage: cosmic-crunch convert [-h] [--logfile LOGFILE] [--processes PROCESSES]
-                             [--skip_empty]
+                             [--skip_empty] [--compress] [--complevel COMPLEVEL]
                              path [path ...]
 ```
 
@@ -117,6 +119,19 @@ directory (mirroring the `txt/` layout), or beside the source file otherwise.
 ```bash
 cosmic-crunch convert ./jpl_cosmic/2006/ --skip_empty --processes=4
 ```
+
+### Compression
+
+Output is **uncompressed by default**. `--compress` turns on lossless zlib
+compression (`--complevel` sets the level, default `7`); stored values
+round-trip bit-identically either way.
+
+Compression is opt-in because it does **not** reliably shrink these files. A
+COSMIC profile is many small `float64` variables, and HDF5's per-variable
+chunk + filter overhead outweighs zlib's savings on short profiles — enabling
+compression can nearly *double* a small file. It only pays off for long
+profiles and bulk archival (measured crossover ≈ 1000 levels). Enable it when
+your profiles are large, and measure on a sample before committing an archive.
 
 ## netCDF4 output structure
 
