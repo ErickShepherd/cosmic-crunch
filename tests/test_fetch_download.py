@@ -118,3 +118,21 @@ def test_nonconforming_url_raises_descriptive_error(tmp_path, monkeypatch):
     monkeypatch.setattr(fetch, "SAVE_DIRECTORY", str(tmp_path))
     with pytest.raises(ValueError, match="archive layout"):
         fetch._download_data_file("https://mirror.example/files/data.txt.gz")
+
+
+def test_no_l2_layout_url_downloads(tmp_path, monkeypatch):
+    # The crawler emits .../<date>/txt/ directly when a date directory has no
+    # L2 level; FILENAME_REGEX must accept that layout too (it used to demand
+    # a separator on both sides of the optional L2 and rejected every no-L2
+    # URL).
+    monkeypatch.setattr(fetch, "SAVE_DIRECTORY", str(tmp_path))
+    url = ("https://x/ftp/glevels/cosmic1/postproc/y2006/2006-05-01/"
+           "txt/20060501_0632co1_g35_2p6.L2.txt.gz")
+    monkeypatch.setattr(
+        fetch.requests, "get",
+        lambda *a, **k: _response([b"data"], content_length=None),
+    )
+    fetch._download_data_file(url)
+    expected = (tmp_path / "2006" / "2006-05-01" / "txt"
+                / "20060501_0632co1_g35_2p6.L2.txt.gz")
+    assert expected.exists() and expected.read_bytes() == b"data"

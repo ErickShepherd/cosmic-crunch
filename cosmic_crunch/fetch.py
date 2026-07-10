@@ -17,7 +17,6 @@ import functools
 import logging
 import os
 import re
-from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Pattern
@@ -46,7 +45,7 @@ FORMAT_URL_REGEX = r"<a href=\"(?P<url>\w+/)\""
 # fields, not re-validate the instrument.
 FILENAME_REGEX   = (r".*(?:\\|/)+[^\\/]+(?:\\|/)+postproc(?:\\|/)+"
                     r"y(?P<year>\d{4})(?:\\|/)+(?P<dtg>\d{4}-\d{2}-\d{2})"
-                    r"(?:\\|/)+(?:L2)?(?:\\|/)+(?P<filetype>txt)(?:\\|/)+"
+                    r"(?:\\|/)+(?:L2(?:\\|/)+)?(?P<filetype>txt)(?:\\|/)+"
                     r"(?P<filename>.*)")
 URL_REGEX        = re.compile(URL_REGEX,        re.MULTILINE)
 YEAR_URL_REGEX   = re.compile(YEAR_URL_REGEX,   re.MULTILINE)
@@ -118,7 +117,7 @@ def _crawl_cosmic_urls() -> List[str]:
 
 
 # %% Function definition: crawl_cosmic_urls
-def crawl_cosmic_urls(*args : List, **kwargs : Dict) -> List[str]:
+def crawl_cosmic_urls(*args, **kwargs) -> List[str]:
     '''
 
     Retry-wrapped, pickleable wrapper around :func:`_crawl_cosmic_urls`
@@ -160,7 +159,7 @@ def _crawl_year_urls(cosmic_url     : str,
 
 
 # %% Function definition: crawl_year_urls
-def crawl_year_urls(*args : List, **kwargs : Dict) -> List[str]:
+def crawl_year_urls(*args, **kwargs) -> List[str]:
     '''
 
     Retry-wrapped, pickleable wrapper around :func:`_crawl_year_urls`.
@@ -197,7 +196,7 @@ def _crawl_date_urls(year_url       : str,
 
 
 # %% Function definition: crawl_date_urls
-def crawl_date_urls(*args : List, **kwargs : Dict) -> List[str]:
+def crawl_date_urls(*args, **kwargs) -> List[str]:
     '''
 
     Retry-wrapped, pickleable wrapper around :func:`_crawl_date_urls`.
@@ -239,7 +238,7 @@ def _crawl_format_urls(date_url : str) -> List[str]:
 
 
 # %% Function definition: crawl_format_urls
-def crawl_format_urls(*args : List, **kwargs : Dict) -> List[str]:
+def crawl_format_urls(*args, **kwargs) -> List[str]:
     '''
 
     Retry-wrapped, pickleable wrapper around :func:`_crawl_format_urls`.
@@ -270,7 +269,7 @@ def _crawl_data_urls(format_url : str) -> List[str]:
 
 
 # %% Function definition: crawl_data_urls
-def crawl_data_urls(*args : List, **kwargs : Dict) -> List[str]:
+def crawl_data_urls(*args, **kwargs) -> List[str]:
     '''
 
     Retry-wrapped, pickleable wrapper around :func:`_crawl_data_urls`.
@@ -287,11 +286,12 @@ def _download_data_file(source_url : str) -> None:
 
     Download a single COSMIC data file to ``SAVE_DIRECTORY/<year>/<dtg>/<type>/``.
 
-    The download is **atomic and resumable**: content is streamed to a
-    ``<name>.part`` temporary file and then atomically ``os.replace``\\d into
-    place, so an interrupted download never leaves a truncated final file. A file
-    that already exists with a size matching the server's ``Content-Length`` is
-    skipped, making bulk re-pulls cheap and interrupt-safe.
+    The download is **atomic**: content is streamed to a ``<name>.part``
+    temporary file and then atomically ``os.replace``\\d into place, so an
+    interrupted download never leaves a truncated final file (it restarts
+    from scratch on the next run). A file that already exists with a size
+    matching the server's ``Content-Length`` is skipped, so re-running a
+    bulk pull only fetches what is missing.
 
     :param source_url: The fully-qualified URL of the data file to download.
     :type source_url: str
@@ -375,7 +375,7 @@ def _download_data_file(source_url : str) -> None:
 
 
 # %% Function definition: download_data_file
-def download_data_file(*args : List, **kwargs : Dict) -> None:
+def download_data_file(*args, **kwargs) -> None:
     '''
 
     Retry-wrapped, pickleable wrapper around :func:`_download_data_file`.

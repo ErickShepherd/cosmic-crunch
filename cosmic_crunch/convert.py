@@ -123,7 +123,7 @@ def read_cosmic_ascii_file(filename : str) -> Tuple[dict, dict, bool]:
     
     '''
     
-    logger = logging.getLogger("read_cosmic_ascii_file")
+    logger = logging.getLogger("cosmic_crunch.convert")
     
     header     = {}
     body_index = None
@@ -322,7 +322,7 @@ def convert_cosmic_file(filename   : str,
 
     '''
     
-    logger = logging.getLogger("convert_cosmic_file")
+    logger = logging.getLogger("cosmic_crunch.convert")
     
     completion_codes = {
         "converted" : 0,
