@@ -74,3 +74,32 @@ def test_compress_opt_in_sets_zlib_and_level(tmp_path, real_2006):
     )
     assert filters["zlib"] is True
     assert filters["complevel"] == 4
+
+
+def test_txt_prefix_directory_not_rewritten(tmp_path, real_2006):
+    # A path segment merely STARTING with "txt" must not trigger the txt->nc
+    # mirror (the old substring rewrite mangled e.g. txt_originals/ trees);
+    # only a directory named exactly "txt" is mirrored to a sibling nc/.
+    base    = tmp_path / "txt_originals" / "jpl" / "y2006" / "2006-05-01"
+    txt_dir = base / "txt"
+    os.makedirs(str(txt_dir))
+    shutil.copy(str(real_2006), str(txt_dir / "file.L2.txt.gz"))
+
+    codes = convert.crawl_convert([str(tmp_path / "txt_originals")], processes=1)
+
+    assert codes == [0]
+    assert (base / "nc" / "file.L2.nc").exists()
+    # The old bug rewrote "/txt_originals" -> "/nc/_originals": no such tree.
+    assert not (tmp_path / "nc").exists()
+
+
+def test_file_outside_txt_dir_converts_beside_source(tmp_path, real_2006):
+    data_dir = tmp_path / "data"
+    os.makedirs(str(data_dir))
+    src = data_dir / "file.L2.txt.gz"
+    shutil.copy(str(real_2006), str(src))
+
+    codes = convert.crawl_convert([str(src)], processes=1)
+
+    assert codes == [0]
+    assert (data_dir / "file.L2.nc").exists()
