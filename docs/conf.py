@@ -50,6 +50,7 @@ exclude_patterns = [
     "_build",
     "Thumbs.db",
     ".DS_Store",
+    "audits",
     "design",
     "plans",
     "release-checklist.md",
