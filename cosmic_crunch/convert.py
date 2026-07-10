@@ -37,6 +37,14 @@ __author__ = "Erick Edward Shepherd"
 PROCESSES     = 1
 HEADER_REGEX  = re.compile(r"(?P<field>\S+)\s+=\s+(?P<value>.+)")
 
+# netCDF4 output compression. zlib + shuffle at a mid-high level shrinks the
+# profile files substantially at negligible read cost and is lossless -- stored
+# values round-trip bit-identically. Small profiles compress cheaply, so the
+# level is not a runtime concern.
+COMPRESS_ZLIB      = True
+COMPRESS_SHUFFLE   = True
+COMPRESS_COMPLEVEL = 7
+
 
 
 # %% Function definition: _parse_header_value
@@ -251,7 +259,10 @@ def write_cosmic_netcdf4_file(filename : str, header : dict, data : dict) -> Non
                     variable = group.createVariable(
                         column,
                         df[column].dtype.str,
-                        (df.index.name,)
+                        (df.index.name,),
+                        zlib      = COMPRESS_ZLIB,
+                        shuffle   = COMPRESS_SHUFFLE,
+                        complevel = COMPRESS_COMPLEVEL,
                     )
 
                     variable[:] = df[column].values
