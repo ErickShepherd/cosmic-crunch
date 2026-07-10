@@ -13,3 +13,7 @@ dist/
 
 # Downloaded data directories (default fetch SAVE_DIRECTORY)
 jpl_cosmic/
+
+# Local virtualenvs
+.venv/
+venv/

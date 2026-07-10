@@ -58,6 +58,34 @@ def _configure_logging(logfile : str = None) -> None:
     )
 
 
+# %% Function definition: _complevel
+def _complevel(value : str) -> int:
+
+    '''
+
+    argparse ``type`` for ``--complevel``: parses an integer and rejects
+    anything outside the netCDF4-valid zlib range of 1-9.
+
+    '''
+
+    try:
+
+        level = int(value)
+
+    except ValueError:
+
+        raise argparse.ArgumentTypeError(f"{value!r} is not an integer")
+
+    if not 1 <= level <= 9:
+
+        raise argparse.ArgumentTypeError(
+            f"compression level must be between 1 and 9, got {level} "
+            "(compression is off unless --compress is given)"
+        )
+
+    return level
+
+
 # %% Function definition: _print_conversion_summary
 def _print_conversion_summary(completion_codes : list) -> None:
 
@@ -146,7 +174,11 @@ def run_get(args : argparse.Namespace) -> None:
     if args.to_netcdf4:
 
         completion_codes = convert.crawl_convert(
-            [fetch.SAVE_DIRECTORY], args.processes, args.skip_empty
+            [fetch.SAVE_DIRECTORY],
+            args.processes,
+            args.skip_empty,
+            args.compress,
+            args.complevel,
         )
 
         _print_conversion_summary(completion_codes)
@@ -163,7 +195,11 @@ def run_convert(args : argparse.Namespace) -> None:
     '''
 
     completion_codes = convert.crawl_convert(
-        args.path, args.processes, args.skip_empty
+        args.path,
+        args.processes,
+        args.skip_empty,
+        args.compress,
+        args.complevel,
     )
 
     _print_conversion_summary(completion_codes)
@@ -277,10 +313,33 @@ def build_parser() -> argparse.ArgumentParser:
         help   = "Skips converting files whose arrays are all empty.",
     )
 
+    get_parser.add_argument(
+        "--compress",
+        dest   = "compress",
+        action = "store_true",
+        help   = (
+            "Losslessly zlib-compress the netCDF4 output. Off by default: "
+            "COSMIC files are many small variables, so compression only "
+            "shrinks large profiles and inflates small ones."
+        ),
+    )
+
+    get_parser.add_argument(
+        "--complevel",
+        dest    = "complevel",
+        type    = _complevel,
+        default = convert.COMPRESS_COMPLEVEL,
+        help    = (
+            "The zlib compression level (1-9) for netCDF4 output. Defaults to "
+            f"{convert.COMPRESS_COMPLEVEL}. Applies only with --compress."
+        ),
+    )
+
     get_parser.set_defaults(
         test_run   = False,
         to_netcdf4 = False,
         skip_empty = False,
+        compress   = False,
         func       = run_get,
     )
 
@@ -332,7 +391,33 @@ def build_parser() -> argparse.ArgumentParser:
         help   = "Skips converting files whose arrays are all empty.",
     )
 
-    convert_parser.set_defaults(skip_empty = False, func = run_convert)
+    convert_parser.add_argument(
+        "--compress",
+        dest   = "compress",
+        action = "store_true",
+        help   = (
+            "Losslessly zlib-compress the netCDF4 output. Off by default: "
+            "COSMIC files are many small variables, so compression only "
+            "shrinks large profiles and inflates small ones."
+        ),
+    )
+
+    convert_parser.add_argument(
+        "--complevel",
+        dest    = "complevel",
+        type    = _complevel,
+        default = convert.COMPRESS_COMPLEVEL,
+        help    = (
+            "The zlib compression level (1-9) for netCDF4 output. Defaults to "
+            f"{convert.COMPRESS_COMPLEVEL}. Applies only with --compress."
+        ),
+    )
+
+    convert_parser.set_defaults(
+        skip_empty = False,
+        compress   = False,
+        func       = run_convert,
+    )
 
     return parser
 

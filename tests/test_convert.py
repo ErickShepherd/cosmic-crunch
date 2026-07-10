@@ -3,7 +3,17 @@
 import os
 import shutil
 
+import netCDF4
+
 from cosmic_crunch import convert
+
+
+def _first_variable_filters(ncf):
+    '''Return the HDF5 filter dict of the first variable in the first group.'''
+    with netCDF4.Dataset(ncf) as dataset:
+        group    = next(iter(dataset.groups.values()))
+        variable = next(iter(group.variables.values()))
+        return variable.filters()
 
 
 def _make_tree(root, src, name):
@@ -43,3 +53,24 @@ def test_skip_empty_file(tmp_path, synthetic_empty):
     # skip_empty=True -> code 1 (skipped)
     codes = convert.crawl_convert([dst], processes=1, skip_empty=True)
     assert codes == [1]
+
+
+def test_output_is_uncompressed_by_default(tmp_path, real_2006):
+    # Compression is opt-in: COSMIC files are many small variables, so zlib
+    # inflates the common (small-profile) case. Default output stays raw.
+    dst = _make_tree(str(tmp_path / "raw"), str(real_2006), "raw.L2.txt.gz")
+    assert convert.crawl_convert([dst], processes=1) == [0]
+    ncf = tmp_path / "raw" / "L2" / "nc" / "raw.L2.nc"
+    assert _first_variable_filters(str(ncf))["zlib"] is False
+
+
+def test_compress_opt_in_sets_zlib_and_level(tmp_path, real_2006):
+    dst = _make_tree(str(tmp_path / "zip"), str(real_2006), "zip.L2.txt.gz")
+    assert convert.crawl_convert(
+        [dst], processes=1, compress=True, complevel=4
+    ) == [0]
+    filters = _first_variable_filters(
+        str(tmp_path / "zip" / "L2" / "nc" / "zip.L2.nc")
+    )
+    assert filters["zlib"] is True
+    assert filters["complevel"] == 4

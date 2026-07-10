@@ -37,6 +37,18 @@ __author__ = "Erick Edward Shepherd"
 PROCESSES     = 1
 HEADER_REGEX  = re.compile(r"(?P<field>\S+)\s+=\s+(?P<value>.+)")
 
+# netCDF4 output compression, OFF by default (opt in with compress=True or the
+# --compress CLI flag). zlib compression is lossless -- stored values round-trip
+# bit-identically -- but it is NOT free here: a COSMIC file is many small
+# float64 variables, and HDF5's per-variable chunk + filter overhead swamps
+# zlib's savings until the profiles are large (measured crossover ~1000 levels;
+# below it, compression can nearly double a file). It pays off for long profiles
+# and bulk archival, so it is offered but left off by default. COMPRESS_SHUFFLE
+# and COMPRESS_COMPLEVEL apply only when compression is enabled.
+COMPRESS_DEFAULT   = False
+COMPRESS_SHUFFLE   = True
+COMPRESS_COMPLEVEL = 7
+
 
 
 # %% Function definition: _parse_header_value
@@ -199,22 +211,33 @@ def read_cosmic_ascii_file(filename : str) -> Tuple[dict, dict, bool]:
 
 
 # %% Function definition: write_cosmic_netcdf4_file
-def write_cosmic_netcdf4_file(filename : str, header : dict, data : dict) -> None:
-    
+def write_cosmic_netcdf4_file(filename  : str,
+                              header    : dict,
+                              data      : dict,
+                              compress  : bool = COMPRESS_DEFAULT,
+                              complevel : int  = COMPRESS_COMPLEVEL) -> None:
+
     '''
-    
+
     Given a filename, header data, and a `dict` of datasets, this function
     creates a new netCDF4 file of the data.
-    
+
     :param filename: The filename of or path to the data file.
     :type filename: str
-    
+
     :param header: The ASCII file header containing metadata about the dataset.
     :type header: dict
-    
+
     :param data: A `dict` of `pandas.DataFrame` objects of the file data.
     :type data: dict
-    
+
+    :param compress: Whether to zlib-compress the variables. Lossless.
+    :type compress: bool
+
+    :param complevel: The zlib compression level (1-9); ignored if not
+        compressing.
+    :type complevel: int
+
     '''
     
     base_filename = os.path.splitext(filename)[0]
@@ -251,29 +274,42 @@ def write_cosmic_netcdf4_file(filename : str, header : dict, data : dict) -> Non
                     variable = group.createVariable(
                         column,
                         df[column].dtype.str,
-                        (df.index.name,)
+                        (df.index.name,),
+                        zlib      = compress,
+                        shuffle   = compress and COMPRESS_SHUFFLE,
+                        complevel = complevel,
                     )
 
                     variable[:] = df[column].values
     
 
 # %% Function definition: convert_cosmic_file
-def convert_cosmic_file(filename : str, skip_empty : bool = False) -> int:
-    
+def convert_cosmic_file(filename   : str,
+                        skip_empty : bool = False,
+                        compress   : bool = COMPRESS_DEFAULT,
+                        complevel  : int  = COMPRESS_COMPLEVEL) -> int:
+
     '''
-    
+
     Given the filename of or path to a COSMIC ASCII data file, this function
     reads the file data and header and writes it to a new netCDF4 file.
-    
+
     :param filename: The filename of or path to a COSMIC ASCII data file.
     :type filename: str
-    
+
     :param skip_empty: Whether skip conversion of files whose arrays are empty.
     :type skip_empty: bool
-    
+
+    :param compress: Whether to zlib-compress the output variables. Lossless.
+    :type compress: bool
+
+    :param complevel: The zlib compression level (1-9); ignored if not
+        compressing.
+    :type complevel: int
+
     :return: An integer completion code. 0: converted, 1: skipped, 2: error.
     :rtype: int
-    
+
     '''
     
     logger = logging.getLogger("convert_cosmic_file")
@@ -300,15 +336,19 @@ def convert_cosmic_file(filename : str, skip_empty : bool = False) -> int:
                 return completion_codes["skipped"]
             
             else:
-                
-                write_cosmic_netcdf4_file(filename, header, data)
-                
+
+                write_cosmic_netcdf4_file(
+                    filename, header, data, compress, complevel
+                )
+
                 return completion_codes["converted"]
-                
+
         else:
-            
-            write_cosmic_netcdf4_file(filename, header, data)
-            
+
+            write_cosmic_netcdf4_file(
+                filename, header, data, compress, complevel
+            )
+
             return completion_codes["converted"]
         
     except Exception as error:
@@ -325,29 +365,38 @@ def convert_cosmic_file(filename : str, skip_empty : bool = False) -> int:
 
 # %% Function definition: crawl_convert
 def crawl_convert(paths      : Iterable,
-                  processes  : int = PROCESSES,
-                  skip_empty : bool = False) -> List[int]:
-    
+                  processes  : int  = PROCESSES,
+                  skip_empty : bool = False,
+                  compress   : bool = COMPRESS_DEFAULT,
+                  complevel  : int  = COMPRESS_COMPLEVEL) -> List[int]:
+
     '''
-    
+
     Given the path to some COSMIC ASCII data file, this function creates a
     netCDF4 formatted copy inplace. Given the path to a root directory
     containing multiple COSMIC ASCII data files, this function crawls the
     directory, identifies each .txt.gz file, and creates a netCDF4 formatted
     copy inplace.
-    
+
     :param path: The paths to COSMIC ASCII files or directories of them.
     :type path: list
-    
+
     :param processes: The number of multiprocessing workers to use.
     :type processes: int
-    
+
     :param skip_empty: Whether skip conversion of files whose arrays are empty.
     :type skip_empty: bool
-    
+
+    :param compress: Whether to zlib-compress the output variables. Lossless.
+    :type compress: bool
+
+    :param complevel: The zlib compression level (1-9); ignored if not
+        compressing.
+    :type complevel: int
+
     :return: A list of integer completion codes.
     :rtype: List[int]
-    
+
     '''
     
     # Collect the data files across ALL input paths first, then convert once.
@@ -392,7 +441,12 @@ def crawl_convert(paths      : Iterable,
             data_paths.append(path)
 
     completion_codes = parallelize(
-        partial(convert_cosmic_file, skip_empty = skip_empty),
+        partial(
+            convert_cosmic_file,
+            skip_empty = skip_empty,
+            compress   = compress,
+            complevel  = complevel,
+        ),
         data_paths,
         "Converting ASCII to netCDF4",
         processes,
