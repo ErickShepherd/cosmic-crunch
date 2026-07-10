@@ -4,6 +4,53 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.1] — 2026-07-10
+
+Review-driven fix batch (independent multi-model review + follow-up
+audit) plus the Read the Docs site configuration in a tag, fixing
+RTD's tag-based "stable" build.
+
+### Fixed
+- `--year_regex`/`--date_regex` are now threaded to multiprocessing
+  workers as bound arguments instead of rebound module globals, so they
+  survive the `spawn`/`forkserver` start methods (macOS/Windows default;
+  Linux default from Python 3.14). Previously `--processes > 1` on those
+  platforms silently ignored the filters and crawled the entire archive.
+- Every `requests.get` now has a (connect, read) timeout; a stalled
+  connection previously hung a worker forever with the bounded retry
+  never firing.
+- User patterns with alternation (`--year_regex '2006|2007'`) now match
+  all alternatives; the unwrapped splice previously matched nothing.
+- `cosmic-crunch convert` exits non-zero when nothing was found to
+  convert or any file errored (previously exited 0 on total failure).
+- The `txt` → `nc` output rewrite fires only on path segments named
+  exactly `txt`; segments merely starting with `txt` (e.g.
+  `txt_originals/`) are no longer mangled.
+- `FILENAME_REGEX` accepts archive layouts without an `L2` level — a
+  layout the crawler itself emits — instead of failing every such
+  download; and no longer accepts a doubled `L2L2` segment.
+- A URL outside the expected archive layout now raises a descriptive
+  `ValueError` instead of an opaque, retried `TypeError`.
+- Retry-wrapper return annotations corrected (they rendered wrong types
+  into the API docs); module-qualified logger names in `convert`;
+  user-facing typo fixes.
+
+### Added
+- Sphinx documentation site hosted on Read the Docs
+  (<https://cosmic-crunch.readthedocs.io/>); `Documentation` URL in the
+  PyPI project links.
+- README: "Use from Python" section (library conversion + parsing, and
+  the `xarray.open_dataset(..., group=...)` read-back the grouped netCDF
+  layout requires), RO/GNSS-RO keywords, and a UCAR-CDAAC-vs-JPL-GENESIS
+  disambiguation note.
+- `cosmic-crunch get --logfile` (previously only `convert` had it;
+  `get` always wrote `cosmic_crunch.log` to the working directory and
+  crashed in a read-only one).
+
+### Changed
+- README converted to Markdown (renders on PyPI as `text/markdown`);
+  shields.io DOI badge; `erickshepherd.com` backlink.
+
 ## [2.1.0] — 2026-07-10
 
 ### Added
@@ -104,6 +151,7 @@ The original two-script tool (unpackaged, AGPL-3.0, never published to PyPI):
 - `convert_files.py` (v1.3.3) — convert COSMIC ASCII files to netCDF4. Created
   2021-01-28, last updated 2021-08-02.
 
+[2.1.1]: https://github.com/ErickShepherd/cosmic-crunch/releases/tag/v2.1.1
 [2.1.0]: https://github.com/ErickShepherd/cosmic-crunch/releases/tag/v2.1.0
 [2.0.2]: https://github.com/ErickShepherd/cosmic-crunch/releases/tag/v2.0.2
 [2.0.1]: https://github.com/ErickShepherd/cosmic-crunch/releases/tag/v2.0.1
