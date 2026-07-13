@@ -48,9 +48,10 @@ cosmic-crunch = "cosmic_crunch.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/ErickShepherd/cosmic-crunch"
-Documentation = "https://cosmic-crunch.readthedocs.io/en/latest/"
+Documentation = "https://cosmic-crunch.readthedocs.io/en/stable/"
 Source = "https://github.com/ErickShepherd/cosmic-crunch"
-"Bug Tracker" = "https://github.com/ErickShepherd/cosmic-crunch/issues"
+Changelog = "https://github.com/ErickShepherd/cosmic-crunch/releases"
+Issues = "https://github.com/ErickShepherd/cosmic-crunch/issues"
 
 [tool.hatch.version]
 path = "cosmic_crunch/__init__.py"
