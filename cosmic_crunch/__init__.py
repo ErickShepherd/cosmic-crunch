@@ -16,4 +16,4 @@ Kept intentionally light: importing the package must not import the ``fetch`` or
 '''
 
 __author__ = "Erick Edward Shepherd"
-__version__ = "2.1.1"
+__version__ = "2.1.2"
